@@ -41,10 +41,22 @@ async fn main() -> Result<()> {
 
     info!("👂 Listening for lid close events...");
 
+    let mut last_close_time: Option<std::time::Instant> = None;
+    let mut last_resume_time: Option<std::time::Instant> = None;
+    let debounce_window = std::time::Duration::from_secs(3);
+
     // Main event loop
     while let Some(event) = rx.recv().await {
         match event {
             LidEvent::LidClosed => {
+                if let Some(last) = last_close_time {
+                    if last.elapsed() < debounce_window {
+                        info!("⏳ Duplicate LidClosed event within debounce window, ignoring.");
+                        continue;
+                    }
+                }
+                last_close_time = Some(std::time::Instant::now());
+
                 info!("🔒 Lid close / sleep detected! Starting auto-commit process...");
                 match handle_lid_close(&config).await {
                     Ok(results) => {
@@ -67,6 +79,14 @@ async fn main() -> Result<()> {
                 }
             }
             LidEvent::LidResumed => {
+                if let Some(last) = last_resume_time {
+                    if last.elapsed() < debounce_window {
+                        info!("⏳ Duplicate LidResumed event within debounce window, ignoring.");
+                        continue;
+                    }
+                }
+                last_resume_time = Some(std::time::Instant::now());
+
                 info!("🔓 Laptop resumed / lid opened! Showing notice popup...");
                 notifier::notify_lid_resumed().await;
             }

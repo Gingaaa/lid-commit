@@ -62,30 +62,43 @@ pub async fn notify_error(message: &str) {
     show_notification("🔒 LidCommit Error", message).await;
 }
 
+#[cfg(target_os = "windows")]
+static POPUP_ACTIVE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
 /// Show notification and popup when laptop wakes up / lid is reopened
 pub async fn notify_lid_resumed() {
-    show_notification(
-        "🔒 LidCommit Alert",
-        "Welcome back! The laptop lid was off / laptop was asleep.",
-    )
-    .await;
-
     #[cfg(target_os = "windows")]
     {
-        std::thread::spawn(|| {
-            use windows::core::w;
-            use windows::Win32::UI::WindowsAndMessaging::{
-                MessageBoxW, MB_ICONINFORMATION, MB_OK, MB_SETFOREGROUND, MB_SYSTEMMODAL,
-            };
-            unsafe {
-                let _ = MessageBoxW(
-                    None,
-                    w!("Welcome back!\n\nThe laptop lid was off / laptop was in sleep mode."),
-                    w!("LidCommit Notice"),
-                    MB_OK | MB_ICONINFORMATION | MB_SYSTEMMODAL | MB_SETFOREGROUND,
-                );
-            }
-        });
+        use std::sync::atomic::Ordering;
+        if POPUP_ACTIVE
+            .compare_exchange(false, true, Ordering::Acquire, Ordering::Relaxed)
+            .is_ok()
+        {
+            std::thread::spawn(|| {
+                use windows::core::w;
+                use windows::Win32::UI::WindowsAndMessaging::{
+                    MessageBoxW, MB_ICONINFORMATION, MB_OK, MB_SETFOREGROUND, MB_SYSTEMMODAL,
+                };
+                unsafe {
+                    let _ = MessageBoxW(
+                        None,
+                        w!("Welcome back!\n\nThe laptop lid was off / laptop was in sleep mode."),
+                        w!("LidCommit Notice"),
+                        MB_OK | MB_ICONINFORMATION | MB_SYSTEMMODAL | MB_SETFOREGROUND,
+                    );
+                }
+                POPUP_ACTIVE.store(false, Ordering::Release);
+            });
+        }
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        show_notification(
+            "🔒 LidCommit Alert",
+            "Welcome back! The laptop lid was off / laptop was asleep.",
+        )
+        .await;
     }
 }
 

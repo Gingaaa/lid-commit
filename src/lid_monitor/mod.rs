@@ -150,9 +150,11 @@ mod windows {
         }
     }
 
-    // Thread-local sender used inside the wndproc callback
+    // Thread-local sender and state tracking used inside the wndproc callback
     thread_local! {
         static TX: std::cell::RefCell<Option<tokio::sync::mpsc::Sender<LidEvent>>> =
+            std::cell::RefCell::new(None);
+        static PREV_IS_CLOSED: std::cell::RefCell<Option<bool>> =
             std::cell::RefCell::new(None);
     }
 
@@ -181,20 +183,32 @@ mod windows {
                             true
                         };
 
+                        let was_closed = PREV_IS_CLOSED.with(|cell| *cell.borrow());
+                        PREV_IS_CLOSED.with(|cell| *cell.borrow_mut() = Some(is_closed));
+
                         if is_closed {
-                            tracing::info!("🔒 Lid close event detected via GUID_LIDSWITCH_STATE_CHANGE");
-                            send_lid_event(crate::LidEvent::LidClosed);
+                            if was_closed != Some(true) {
+                                tracing::info!("🔒 Lid close event detected via GUID_LIDSWITCH_STATE_CHANGE");
+                                send_lid_event(crate::LidEvent::LidClosed);
+                            }
                         } else {
-                            tracing::info!("🔓 Lid open detected via GUID_LIDSWITCH_STATE_CHANGE");
-                            send_lid_event(crate::LidEvent::LidResumed);
+                            // Only notify lid resume if it transitioned from closed -> open
+                            if was_closed == Some(true) {
+                                tracing::info!("🔓 Lid open detected via GUID_LIDSWITCH_STATE_CHANGE");
+                                send_lid_event(crate::LidEvent::LidResumed);
+                            } else {
+                                tracing::info!("💻 Lid is open (initial or unchanged state)");
+                            }
                         }
                     }
                 }
             } else if event_type == PBT_APMSUSPEND {
                 tracing::info!("🔒 System suspend (sleep) event detected via PBT_APMSUSPEND");
+                PREV_IS_CLOSED.with(|cell| *cell.borrow_mut() = Some(true));
                 send_lid_event(crate::LidEvent::LidClosed);
             } else if event_type == PBT_APMRESUMESUSPEND || event_type == PBT_APMRESUMEAUTOMATIC {
                 tracing::info!("🔓 System resume event detected via PBT_APMRESUME");
+                PREV_IS_CLOSED.with(|cell| *cell.borrow_mut() = Some(false));
                 send_lid_event(crate::LidEvent::LidResumed);
             }
         }
