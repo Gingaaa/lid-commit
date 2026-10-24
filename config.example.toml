@@ -1,0 +1,66 @@
+# LidCommit Configuration File
+# Location: ~/.config/lid-commit/config.toml (Linux/macOS)
+#            %APPDATA%\lid-commit\config.toml (Windows)
+#
+# Run `lid-commit --init-config` to create this file automatically.
+
+[general]
+# Push changes to remote after committing
+push_after_commit = true
+# Show OS toast notification when auto-commit succeeds
+notify_on_success = true
+# Show OS toast notification when auto-commit fails
+notify_on_failure = true
+
+[ai]
+# AI provider for commit message generation
+# Options: "gemini" | "openai" | "ollama"
+provider = "gemini"
+
+# Name of the environment variable holding your API key
+# For Gemini: set GEMINI_API_KEY=<your key>
+# For OpenAI: set OPENAI_API_KEY=<your key>
+# For Ollama: no key needed (runs locally)
+api_key_env = "GEMINI_API_KEY"
+
+# Model to use
+# Gemini: "gemini-2.0-flash", "gemini-1.5-pro"
+# OpenAI: "gpt-4o-mini", "gpt-4o"
+# Ollama: "llama3.2", "codellama", "mistral"
+model = "gemini-2.0-flash"
+
+# Maximum number of diff lines to send to the AI
+# Keeps token usage low for large changes
+max_diff_lines = 200
+
+[ide]
+# Which IDEs to watch for open projects
+# Options: "vscode", "jetbrains", "any"
+# Use "any" to detect any running process whose CWD is a git repo
+watch = ["vscode", "jetbrains", "any"]
+
+[git]
+# Prefix added to every auto-generated commit message
+commit_prefix = "🔒 lid-close:"
+
+# Whether to push after committing
+push = true
+
+# Paths to NEVER auto-commit (shell glob patterns)
+# Add personal or sensitive project paths here
+excluded_paths = [
+  # "~/work/sensitive-project",
+  # "~/Desktop/*",
+]
+
+[safety]
+# Skip committing if more than this many files changed
+# (helps avoid accidentally committing node_modules or build artifacts)
+max_files_changed = 50
+
+# Skip if no git remote is configured
+# (prevents commits to repos you can't push to)
+require_remote = true
+
+# Skip if the working tree has merge conflicts
+skip_on_conflicts = true

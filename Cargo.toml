@@ -1,0 +1,80 @@
+[package]
+name = "lid-commit"
+version = "0.1.0"
+edition = "2021"
+description = "Auto-commit and push your code changes when you close your laptop lid"
+authors = ["LidCommit Contributors"]
+license = "MIT"
+repository = "https://github.com/yourusername/lid-commit"
+readme = "README.md"
+keywords = ["git", "automation", "productivity", "daemon"]
+
+[[bin]]
+name = "lid-commit"
+path = "src/main.rs"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# Config parsing
+toml = "0.8"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# HTTP client (for Gemini API)
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+
+# Git operations via CLI (simpler than libgit2 for our use case)
+# We shell out to git for reliability
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Error handling
+anyhow = "1"
+thiserror = "1"
+
+# Cross-platform filesystem paths
+dirs = "5"
+
+# OS notifications
+notify-rust = "4"
+
+# Environment variable loading
+dotenvy = "0.15"
+
+# Date/time for fallback commit messages
+chrono = { version = "0.4", features = ["serde"] }
+
+# URL decoding (for VS Code file:// URI parsing)
+urlencoding = "2"
+
+# Process listing (to find IDE processes)
+sysinfo = { version = "0.31", default-features = false, features = ["system"] }
+
+[target.'cfg(windows)'.dependencies]
+# Windows power management APIs
+windows = { version = "0.58", features = [
+  "Win32_System_Power",
+  "Win32_Foundation",
+  "Win32_UI_WindowsAndMessaging",
+  "Win32_System_Threading",
+  "Win32_System_LibraryLoader",
+  "Win32_Graphics_Gdi",
+] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+# IOKit for sleep notifications (via objc/core-foundation)
+core-foundation = "0.9"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+# D-Bus for logind PrepareForSleep signal
+zbus = { version = "4", default-features = false, features = ["tokio"] }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true

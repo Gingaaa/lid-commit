@@ -1,0 +1,24 @@
+[Unit]
+Description=LidCommit — Auto-commit code on lid close
+Documentation=https://github.com/yourusername/lid-commit
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/lid-commit
+Restart=always
+RestartSec=5
+
+# Load environment variables (including GEMINI_API_KEY)
+EnvironmentFile=-%h/.config/lid-commit/.env
+
+Environment=LIDCOMMIT_LOG=lid_commit=info
+
+StandardOutput=journal
+StandardError=journal
+
+# Run as the user (not root)
+# This service should be installed as a user service (systemctl --user)
+
+[Install]
+WantedBy=default.target
