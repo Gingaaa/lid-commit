@@ -125,10 +125,18 @@ pub async fn notify_lid_resumed() {
             .is_ok()
         {
             let popup_text = format!("Welcome back!\n\n{}", status_detail);
+            let toast_body = status_detail.clone();
+
+            // Also fire an OS Toast notification so it is visible immediately in the notification center
+            tokio::spawn(async move {
+                show_notification("🔒 LidCommit Status", &toast_body).await;
+            });
+
             std::thread::spawn(move || {
                 use windows::core::HSTRING;
                 use windows::Win32::UI::WindowsAndMessaging::{
-                    MessageBoxW, MB_ICONINFORMATION, MB_OK, MB_SETFOREGROUND, MB_SYSTEMMODAL,
+                    MessageBoxW, MB_ICONINFORMATION, MB_OK, MB_SERVICE_NOTIFICATION,
+                    MB_SETFOREGROUND, MB_TOPMOST,
                 };
                 let text_wide = HSTRING::from(popup_text.as_str());
                 let title_wide = HSTRING::from("LidCommit Status");
@@ -137,7 +145,11 @@ pub async fn notify_lid_resumed() {
                         None,
                         &text_wide,
                         &title_wide,
-                        MB_OK | MB_ICONINFORMATION | MB_SYSTEMMODAL | MB_SETFOREGROUND,
+                        MB_OK
+                            | MB_ICONINFORMATION
+                            | MB_TOPMOST
+                            | MB_SETFOREGROUND
+                            | MB_SERVICE_NOTIFICATION,
                     );
                 }
                 POPUP_ACTIVE.store(false, Ordering::Release);
