@@ -69,11 +69,13 @@ async fn main() -> Result<()> {
                                 info!("  📁 {}: {}", result.project_path, result.commit_message);
                             }
                         }
-                        // Show OS notification
+                        // Record detailed status so it is shown in the notice popup when user returns
+                        notifier::record_commit_status(&results, None);
                         notifier::notify_results(&results).await;
                     }
                     Err(e) => {
                         error!("Auto-commit failed: {}", e);
+                        notifier::record_commit_status(&[], Some(&e.to_string()));
                         notifier::notify_error(&e.to_string()).await;
                     }
                 }

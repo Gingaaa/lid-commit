@@ -65,8 +65,58 @@ pub async fn notify_error(message: &str) {
 #[cfg(target_os = "windows")]
 static POPUP_ACTIVE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
+static LAST_STATUS_MESSAGE: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
+
+/// Store the outcome of the lid close auto-commit process
+pub fn record_commit_status(results: &[CommitResult], err: Option<&str>) {
+    let committed: Vec<_> = results.iter().filter(|r| r.committed).collect();
+    let failed: Vec<_> = results.iter().filter(|r| r.error.is_some()).collect();
+
+    let msg = if let Some(e) = err {
+        format!("⚠️ Auto-commit encountered an error:\n{}", e)
+    } else if !committed.is_empty() {
+        if committed.len() == 1 {
+            let r = &committed[0];
+            let repo_name = r.project_path.split(['/', '\\']).last().unwrap_or("project");
+            format!(
+                "✅ Successfully auto-committed changes!\n\n📁 Project: {}\n📝 Files: {}\n💬 Message: \"{}\"",
+                repo_name, r.files_changed, r.commit_message
+            )
+        } else {
+            let mut summary = format!(
+                "✅ Successfully auto-committed {} project(s):\n",
+                committed.len()
+            );
+            for r in &committed {
+                let repo_name = r.project_path.split(['/', '\\']).last().unwrap_or("project");
+                summary.push_str(&format!("\n• {}: \"{}\"", repo_name, r.commit_message));
+            }
+            summary
+        }
+    } else if !failed.is_empty() {
+        format!(
+            "⚠️ Auto-commit failed for {} project(s). Please check git logs.",
+            failed.len()
+        )
+    } else {
+        "ℹ️ No uncommitted changes were detected in your open projects.".to_string()
+    };
+
+    if let Ok(mut lock) = LAST_STATUS_MESSAGE.lock() {
+        *lock = Some(msg);
+    }
+}
+
 /// Show notification and popup when laptop wakes up / lid is reopened
 pub async fn notify_lid_resumed() {
+    let status_detail = {
+        LAST_STATUS_MESSAGE
+            .lock()
+            .ok()
+            .and_then(|mut lock| lock.take())
+            .unwrap_or_else(|| "Welcome back!\n\nThe laptop lid was closed.".to_string())
+    };
+
     #[cfg(target_os = "windows")]
     {
         use std::sync::atomic::Ordering;
@@ -74,16 +124,19 @@ pub async fn notify_lid_resumed() {
             .compare_exchange(false, true, Ordering::Acquire, Ordering::Relaxed)
             .is_ok()
         {
-            std::thread::spawn(|| {
-                use windows::core::w;
+            let popup_text = format!("Welcome back!\n\n{}", status_detail);
+            std::thread::spawn(move || {
+                use windows::core::HSTRING;
                 use windows::Win32::UI::WindowsAndMessaging::{
                     MessageBoxW, MB_ICONINFORMATION, MB_OK, MB_SETFOREGROUND, MB_SYSTEMMODAL,
                 };
+                let text_wide = HSTRING::from(popup_text.as_str());
+                let title_wide = HSTRING::from("LidCommit Status");
                 unsafe {
                     let _ = MessageBoxW(
                         None,
-                        w!("Welcome back!\n\nThe laptop lid was off / laptop was in sleep mode."),
-                        w!("LidCommit Notice"),
+                        &text_wide,
+                        &title_wide,
                         MB_OK | MB_ICONINFORMATION | MB_SYSTEMMODAL | MB_SETFOREGROUND,
                     );
                 }
@@ -95,8 +148,8 @@ pub async fn notify_lid_resumed() {
     #[cfg(not(target_os = "windows"))]
     {
         show_notification(
-            "🔒 LidCommit Alert",
-            "Welcome back! The laptop lid was off / laptop was asleep.",
+            "🔒 LidCommit Status",
+            &status_detail,
         )
         .await;
     }

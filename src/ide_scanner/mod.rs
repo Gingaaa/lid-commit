@@ -65,7 +65,7 @@ pub async fn find_open_projects(config: &Config) -> Result<Vec<Project>> {
                     && !is_system_path(&cwd_str)
                     && !seen_paths.contains(&cwd_str)
                 {
-                    if is_git_repo(&cwd_str).await {
+                    if is_git_repo(&cwd_str) {
                         seen_paths.insert(cwd_str.clone());
                         debug!("  Generic CWD git repo: {} (from {})", cwd_str, name);
                         projects.push(Project {
@@ -131,7 +131,7 @@ async fn get_project_from_process(process: &sysinfo::Process) -> Option<String> 
         let arg_str = arg.to_string_lossy();
         let path = std::path::Path::new(arg_str.as_ref());
         if path.is_dir() && !is_system_path(&arg_str) {
-            if is_git_repo(&arg_str).await {
+            if is_git_repo(&arg_str) {
                 return Some(arg_str.into_owned());
             }
         }
@@ -140,7 +140,7 @@ async fn get_project_from_process(process: &sysinfo::Process) -> Option<String> 
     // Fallback: check CWD
     if let Some(cwd) = process.cwd() {
         let cwd_str = cwd.to_string_lossy().to_string();
-        if !cwd_str.is_empty() && !is_system_path(&cwd_str) && is_git_repo(&cwd_str).await {
+        if !cwd_str.is_empty() && !is_system_path(&cwd_str) && is_git_repo(&cwd_str) {
             return Some(cwd_str);
         }
     }
@@ -197,7 +197,7 @@ async fn get_vscode_recent_workspaces() -> Vec<String> {
                             }
                             final_path = final_path.replace('/', "\\");
                         }
-                        if std::path::Path::new(&final_path).is_dir() {
+                        if std::path::Path::new(&final_path).is_dir() && is_git_repo(&final_path) {
                             paths.push(final_path);
                         }
                     };
@@ -236,7 +236,7 @@ async fn get_vscode_recent_workspaces() -> Vec<String> {
 }
 
 /// Quickly check if a directory is a git repo (has a .git folder/file)
-async fn is_git_repo(path: &str) -> bool {
+fn is_git_repo(path: &str) -> bool {
     std::path::Path::new(path).join(".git").exists()
 }
 
