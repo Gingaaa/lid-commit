@@ -51,7 +51,7 @@ async fn main() -> Result<()> {
             LidEvent::LidClosed => {
                 if let Some(last) = last_close_time {
                     if last.elapsed() < debounce_window {
-                        info!("⏳ Duplicate LidClosed event within debounce window, ignoring.");   
+                        info!("⏳ Duplicate LidClosed event within debounce window, ignoring."); 
                         continue;
                     }
                 }
