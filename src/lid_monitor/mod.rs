@@ -261,6 +261,8 @@ mod macos {
             let tx_box = Box::new(tx);
             let refcon = Box::into_raw(tx_box) as *mut c_void;
 
+            #[link(name = "IOKit", kind = "framework")]
+            #[link(name = "CoreFoundation", kind = "framework")]
             extern "C" {
                 fn IORegisterForSystemPower(
                     refcon: *mut c_void,

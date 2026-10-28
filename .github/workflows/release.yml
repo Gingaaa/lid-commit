@@ -49,12 +49,12 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
-      # Linux D-Bus build dependency
+      # Linux D-Bus and SSL build dependencies
       - name: Install Linux dependencies
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y pkg-config libdbus-1-dev
+          sudo apt-get install -y pkg-config libdbus-1-dev libssl-dev
 
       - name: Build release binary
         run: cargo build --release --target ${{ matrix.target }}
@@ -70,7 +70,8 @@ jobs:
       - name: Package Unix artifact
         if: matrix.os != 'windows-latest'
         run: |
-          tar -czvf ${{ matrix.asset_name }} -C target/${{ matrix.target }}/release ${{ matrix.bin_name }} README.md config.example.toml
+          cp target/${{ matrix.target }}/release/${{ matrix.bin_name }} .
+          tar -czvf ${{ matrix.asset_name }} ${{ matrix.bin_name }} README.md config.example.toml
 
       # Upload to GitHub Release
       - name: Upload Release Asset
