@@ -2,6 +2,8 @@
 
 **Auto-commit your code changes when you close your laptop lid.**
 
+Note the Windows setting requirement: "Set 'When I close the lid' to 'Do nothing' in Control Panel > Power Options so background Git sync runs uninterrupted."
+
 Never lose progress again. LidCommit runs silently in the background and, when you close your laptop, automatically detects your open IDE projects, generates an AI-powered commit message using Gemini, and commits + pushes your changes to GitHub.
 
 When you pick up another device, just `git pull` and carry on exactly where you left off.

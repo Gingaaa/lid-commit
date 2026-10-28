@@ -1,0 +1,81 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*' # Triggers whenever you push a tag like v0.1.0, v1.0.0, etc.
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Windows x86_64
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            bin_name: lid-commit.exe
+            asset_name: lid-commit-windows-x86_64.zip
+
+          # macOS Intel
+          - target: x86_64-apple-darwin
+            os: macos-13
+            bin_name: lid-commit
+            asset_name: lid-commit-macos-x86_64.tar.gz
+
+          # macOS Apple Silicon (M1/M2/M3)
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            bin_name: lid-commit
+            asset_name: lid-commit-macos-aarch64.tar.gz
+
+          # Linux x86_64
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            bin_name: lid-commit
+            asset_name: lid-commit-linux-x86_64.tar.gz
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      # Linux D-Bus build dependency
+      - name: Install Linux dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pkg-config libdbus-1-dev
+
+      - name: Build release binary
+        run: cargo build --release --target ${{ matrix.target }}
+
+      # Package Windows (.zip)
+      - name: Package Windows artifact
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          Compress-Archive -Path "target/${{ matrix.target }}/release/${{ matrix.bin_name }}", "README.md", "config.example.toml" -DestinationPath "${{ matrix.asset_name }}"
+
+      # Package Unix (.tar.gz)
+      - name: Package Unix artifact
+        if: matrix.os != 'windows-latest'
+        run: |
+          tar -czvf ${{ matrix.asset_name }} -C target/${{ matrix.target }}/release ${{ matrix.bin_name }} README.md config.example.toml
+
+      # Upload to GitHub Release
+      - name: Upload Release Asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ matrix.asset_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
