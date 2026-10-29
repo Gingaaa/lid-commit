@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LidCommit Dashboard</title>
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: rgba(22, 30, 49, 0.7);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent: #38bdf8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      user-select: none;
+    }
+
+    body {
+      background: var(--bg);
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.15) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(56, 189, 248, 0.12) 0px, transparent 50%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Header */
+    header {
+      padding: 18px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--card-border);
+      background: rgba(9, 13, 22, 0.8);
+      backdrop-filter: blur(12px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #6366f1, #38bdf8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+    }
+
+    .brand-title {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-subtitle {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* Daemon Status Pill */
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 600;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #34d399;
+      transition: all 0.2s ease;
+    }
+
+    .status-pill.paused {
+      background: rgba(245, 158, 11, 0.15);
+      border-color: rgba(245, 158, 11, 0.3);
+      color: #fbbf24;
+    }
+
+    .status-pill.stopped {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: rgba(239, 68, 68, 0.3);
+      color: #f87171;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+      box-shadow: 0 0 8px currentColor;
+    }
+
+    /* Controls Bar */
+    .controls-bar {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid transparent;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .btn:active {
+      transform: scale(0.97);
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+    .btn-primary:hover {
+      background: var(--primary-hover);
+      box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: var(--card-border);
+      color: var(--text);
+    }
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: rgba(239, 68, 68, 0.3);
+      color: #f87171;
+    }
+    .btn-danger:hover {
+      background: rgba(239, 68, 68, 0.25);
+    }
+
+    /* Main Container & Tabs */
+    .nav-tabs {
+      display: flex;
+      gap: 20px;
+      padding: 0 28px;
+      border-bottom: 1px solid var(--card-border);
+      background: rgba(15, 23, 42, 0.4);
+    }
+
+    .tab-btn {
+      padding: 14px 4px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      position: relative;
+      border: none;
+      background: transparent;
+      transition: color 0.2s;
+    }
+
+    .tab-btn.active {
+      color: #fff;
+    }
+
+    .tab-btn.active::after {
+      content: "";
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--accent);
+      border-radius: 2px;
+    }
+
+    .content-area {
+      flex: 1;
+      padding: 24px 28px;
+      overflow-y: auto;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      backdrop-filter: blur(8px);
+    }
+
+    .card-title {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* Project List */
+    .project-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 16px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      margin-bottom: 10px;
+      transition: all 0.2s;
+    }
+
+    .project-item:hover {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(99, 102, 241, 0.3);
+    }
+
+    .project-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .project-name {
+      font-size: 14px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .project-path {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-family: monospace;
+    }
+
+    .badge {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+      background: rgba(99, 102, 241, 0.2);
+      color: #a5b4fc;
+    }
+
+    .badge-diff {
+      background: rgba(56, 189, 248, 0.2);
+      color: #7dd3fc;
+    }
+
+    .badge-clean {
+      background: rgba(16, 185, 129, 0.2);
+      color: #6ee7b7;
+    }
+
+    /* History Feed */
+    .history-item {
+      padding: 12px 14px;
+      border-left: 3px solid var(--primary);
+      background: rgba(255, 255, 255, 0.02);
+      margin-bottom: 10px;
+      border-radius: 0 8px 8px 0;
+    }
+
+    .history-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .history-message {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    /* Forms */
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: var(--text);
+    }
+
+    .form-desc {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .form-input, .form-select {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--card-border);
+      color: #fff;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .form-input:focus, .form-select:focus {
+      border-color: var(--primary);
+    }
+
+    .form-checkbox {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    .form-checkbox input {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--primary);
+    }
+
+    /* Footer */
+    footer {
+      padding: 12px 28px;
+      border-top: 1px solid var(--card-border);
+      font-size: 12px;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      background: rgba(9, 13, 22, 0.95);
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header>
+    <div class="brand">
+      <div class="brand-icon">🔒</div>
+      <div>
+        <div class="brand-title">LidCommit Desktop</div>
+        <div class="brand-subtitle">Smart auto-commit & push on lid close</div>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <div id="statusPill" class="status-pill">
+        <span class="status-dot"></span>
+        <span id="statusText">Active & Listening</span>
+      </div>
+
+      <div class="controls-bar">
+        <button id="btnSyncNow" class="btn btn-primary" onclick="triggerSync()">⚡ Sync Now</button>
+        <button id="btnToggleDaemon" class="btn btn-secondary" onclick="toggleDaemon()">⏸️ Pause</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Navigation Tabs -->
+  <div class="nav-tabs">
+    <button class="tab-btn active" onclick="switchTab('projects', event)">📁 Detected Projects</button>
+    <button class="tab-btn" onclick="switchTab('history', event)">📜 Activity & History</button>
+    <button class="tab-btn" onclick="switchTab('settings', event)">⚙️ Configuration</button>
+  </div>
+
+  <!-- Content -->
+  <div class="content-area">
+    <!-- PROJECTS TAB -->
+    <div id="tab-projects">
+      <div class="card">
+        <div class="card-title">
+          <span>Active IDE Workspaces & Git Repositories</span>
+          <button class="btn btn-secondary" style="font-size: 12px; padding: 4px 10px;" onclick="refreshData()">🔄 Refresh</button>
+        </div>
+        <div id="projectList">
+          <div style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 24px;">Scanning active repositories...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HISTORY TAB -->
+    <div id="tab-history" style="display: none;">
+      <div class="card">
+        <div class="card-title">
+          <span>Recent Automated Commits</span>
+        </div>
+        <div id="historyList">
+          <div style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 24px;">No auto-commits recorded yet in this session.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETTINGS TAB -->
+    <div id="tab-settings" style="display: none;">
+      <div class="card">
+        <div class="card-title">LidCommit Preferences</div>
+        
+        <div class="form-group">
+          <label class="form-checkbox">
+            <input type="checkbox" id="cfgPush" checked>
+            <span><strong>Push to Remote:</strong> Automatically run <code>git push</code> after auto-committing</span>
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label class="form-checkbox">
+            <input type="checkbox" id="cfgNotify" checked>
+            <span><strong>OS Notifications:</strong> Show status popup and toast when resuming work</span>
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">AI Message Provider</label>
+          <div class="form-desc">Select which LLM powers your contextual git commit messages.</div>
+          <select id="cfgAiProvider" class="form-select">
+            <option value="gemini">Google Gemini (gemini-2.0-flash)</option>
+            <option value="openai">OpenAI (gpt-4o-mini)</option>
+            <option value="ollama">Ollama (Local Offline LLM)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Commit Message Prefix</label>
+          <input type="text" id="cfgPrefix" class="form-input" value="🔒 lid-close:">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Max Files Changed Limit (Safety Guard)</label>
+          <div class="form-desc">Prevent committing if a large build directory or node_modules was touched.</div>
+          <input type="number" id="cfgMaxFiles" class="form-input" value="50">
+        </div>
+
+        <button class="btn btn-primary" onclick="saveSettings()">💾 Save Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <span>🔒 LidCommit v0.1.0 • System Tray Active</span>
+    <span id="lastScanTime">Ready</span>
+  </footer>
+
+  <script>
+    let daemonState = "running"; // "running", "paused", "stopped"
+
+    function switchTab(tab, e) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      if (e && e.target) e.target.classList.add('active');
+      document.getElementById('tab-projects').style.display = tab === 'projects' ? 'block' : 'none';
+      document.getElementById('tab-history').style.display = tab === 'history' ? 'block' : 'none';
+      document.getElementById('tab-settings').style.display = tab === 'settings' ? 'block' : 'none';
+    }
+
+    function sendToHost(action, payload = {}) {
+      if (window.ipc) {
+        window.ipc.postMessage(JSON.stringify({ action, ...payload }));
+      }
+    }
+
+    function toggleDaemon() {
+      const btn = document.getElementById('btnToggleDaemon');
+      const pill = document.getElementById('statusPill');
+      const statusText = document.getElementById('statusText');
+
+      if (daemonState === "running") {
+        daemonState = "paused";
+        btn.textContent = "▶️ Resume";
+        pill.className = "status-pill paused";
+        statusText.textContent = "Paused";
+        sendToHost("pause");
+      } else {
+        daemonState = "running";
+        btn.textContent = "⏸️ Pause";
+        pill.className = "status-pill";
+        statusText.textContent = "Active & Listening";
+        sendToHost("resume");
+      }
+    }
+
+    function triggerSync() {
+      const btn = document.getElementById('btnSyncNow');
+      btn.textContent = "⏳ Syncing...";
+      btn.disabled = true;
+      sendToHost("sync_now");
+      setTimeout(() => {
+        btn.textContent = "⚡ Sync Now";
+        btn.disabled = false;
+        refreshData();
+      }, 2500);
+    }
+
+    function refreshData() {
+      sendToHost("get_status");
+    }
+
+    function saveSettings() {
+      const payload = {
+        push: document.getElementById('cfgPush').checked,
+        notify: document.getElementById('cfgNotify').checked,
+        ai_provider: document.getElementById('cfgAiProvider').value,
+        commit_prefix: document.getElementById('cfgPrefix').value,
+        max_files: parseInt(document.getElementById('cfgMaxFiles').value, 10) || 50
+      };
+      sendToHost("save_settings", payload);
+      alert("Settings saved successfully!");
+    }
+
+    // Called from Rust via evaluate_script or IPC messages
+    window.updateDashboard = function(data) {
+      if (data.projects) {
+        renderProjects(data.projects);
+      }
+      if (data.history) {
+        renderHistory(data.history);
+      }
+      if (data.status) {
+        daemonState = data.status;
+        const pill = document.getElementById('statusPill');
+        const statusText = document.getElementById('statusText');
+        const btn = document.getElementById('btnToggleDaemon');
+        if (daemonState === "running") {
+          pill.className = "status-pill";
+          statusText.textContent = "Active & Listening";
+          btn.textContent = "⏸️ Pause";
+        } else {
+          pill.className = "status-pill paused";
+          statusText.textContent = "Paused";
+          btn.textContent = "▶️ Resume";
+        }
+      }
+      document.getElementById('lastScanTime').textContent = "Last sync: " + new Date().toLocaleTimeString();
+    };
+
+    function renderProjects(projects) {
+      const container = document.getElementById('projectList');
+      if (!projects || projects.length === 0) {
+        container.innerHTML = '<div style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 24px;">No active git projects detected in open IDEs.</div>';
+        return;
+      }
+      container.innerHTML = projects.map(p => `
+        <div class="project-item">
+          <div class="project-info">
+            <div class="project-name">
+              <span>📁 ${p.name}</span>
+              <span class="badge">${p.ide || "IDE"}</span>
+              ${p.has_changes ? '<span class="badge badge-diff">● Uncommitted Changes</span>' : '<span class="badge badge-clean">✓ Clean</span>'}
+            </div>
+            <div class="project-path">${p.path}</div>
+          </div>
+          <div>
+            <button class="btn btn-secondary" style="font-size: 12px; padding: 4px 10px;" onclick="sendToHost('sync_project', { path: '${p.path.replace(/\\/g, '\\\\')}' })">⚡ Commit This</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderHistory(history) {
+      const container = document.getElementById('historyList');
+      if (!history || history.length === 0) {
+        container.innerHTML = '<div style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 24px;">No auto-commits recorded yet.</div>';
+        return;
+      }
+      container.innerHTML = history.map(h => `
+        <div class="history-item" style="border-left-color: ${h.committed ? 'var(--success)' : 'var(--danger)'}">
+          <div class="history-header">
+            <span><strong>${h.project_name}</strong> • ${h.time}</span>
+            <span>${h.files_changed} file(s)</span>
+          </div>
+          <div class="history-message">${h.commit_message || h.error || "Auto-commit processed"}</div>
+        </div>
+      `).join('');
+    }
+
+    // Auto-refresh upon start
+    setTimeout(refreshData, 300);
+  </script>
+</body>
+</html>

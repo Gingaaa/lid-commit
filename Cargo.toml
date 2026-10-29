@@ -53,6 +53,11 @@ urlencoding = "2"
 
 # Process listing (to find IDE processes)
 sysinfo = { version = "0.31", default-features = false, features = ["system"] }
+wry = "0.57.1"
+tray-icon = "0.26.1"
+tao = "0.37.2"
+image = "0.25.10"
+crossbeam-channel = "0.5.17"
 
 [target.'cfg(windows)'.dependencies]
 # Windows power management APIs

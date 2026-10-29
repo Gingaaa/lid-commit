@@ -5,9 +5,30 @@ use tracing_subscriber::EnvFilter;
 mod ai;
 mod config;
 mod git;
+pub mod gui;
 mod ide_scanner;
 mod lid_monitor;
 mod notifier;
+
+pub async fn trigger_manual_sync() {
+    let dummy_config = match config::load().await {
+        Ok(c) => c,
+        Err(_) => config::Config::default(),
+    };
+    info!("⚡ Manual sync requested via GUI dashboard...");
+    match handle_lid_close(&dummy_config).await {
+        Ok(results) => {
+            gui::record_history(&results);
+            notifier::record_commit_status(&results, None);
+            notifier::notify_results(&results).await;
+        }
+        Err(e) => {
+            error!("Manual sync failed: {}", e);
+            notifier::record_commit_status(&[], Some(&e.to_string()));
+            notifier::notify_error(&e.to_string()).await;
+        }
+    }
+}
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -45,8 +66,26 @@ async fn main() -> Result<()> {
     let mut last_resume_time: Option<std::time::Instant> = None;
     let debounce_window = std::time::Duration::from_secs(3);
 
+    // Check for CLI argument to launch headless or with GUI (default: with GUI)
+    let has_headless_arg = std::env::args().any(|arg| arg == "--headless" || arg == "-d");
+
+    // Spawn GUI on dedicated thread if not headless
+    if !has_headless_arg {
+        let config_clone = std::sync::Arc::new(tokio::sync::RwLock::new(config.clone()));
+        std::thread::spawn(move || {
+            if let Err(e) = gui::run_desktop_app(config_clone) {
+                tracing::error!("Desktop GUI error: {}", e);
+            }
+        });
+    }
+
     // Main event loop
     while let Some(event) = rx.recv().await {
+        if gui::is_daemon_paused() {
+            info!("⏸️ Daemon is paused via GUI/tray. Skipping event: {:?}", event);
+            continue;
+        }
+
         match event {
             LidEvent::LidClosed => {
                 if let Some(last) = last_close_time {
@@ -60,6 +99,7 @@ async fn main() -> Result<()> {
                 info!("🔒 Lid close / sleep detected! Starting auto-commit process...");
                 match handle_lid_close(&config).await {
                     Ok(results) => {
+                        gui::record_history(&results);
                         let committed: Vec<_> = results.iter().filter(|r| r.committed).collect();
                         if committed.is_empty() {
                             info!("✅ No uncommitted changes found in any IDE project.");
