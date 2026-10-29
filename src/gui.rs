@@ -66,7 +66,15 @@ pub enum UserEvent {
 }
 
 pub fn run_desktop_app(_config: Arc<tokio::sync::RwLock<Config>>) -> anyhow::Result<()> {
-    let event_loop = EventLoopBuilder::<UserEvent>::with_user_event().build();
+    #[cfg(target_os = "windows")]
+    use tao::platform::windows::EventLoopBuilderExtWindows;
+
+    #[allow(unused_mut)]
+    let mut builder = EventLoopBuilder::<UserEvent>::with_user_event();
+    #[cfg(target_os = "windows")]
+    builder.with_any_thread(true);
+
+    let event_loop = builder.build();
     let proxy = event_loop.create_proxy();
 
     // Build Native Tray Menu
