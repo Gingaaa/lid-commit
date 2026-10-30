@@ -65,7 +65,10 @@ pub enum UserEvent {
     EvalScript(String),
 }
 
-pub fn run_desktop_app(_config: Arc<tokio::sync::RwLock<Config>>) -> anyhow::Result<()> {
+pub fn run_desktop_app(
+    _config: Arc<tokio::sync::RwLock<Config>>,
+    handle: tokio::runtime::Handle,
+) -> anyhow::Result<()> {
     #[cfg(target_os = "windows")]
     use tao::platform::windows::EventLoopBuilderExtWindows;
 
@@ -86,35 +89,42 @@ pub fn run_desktop_app(_config: Arc<tokio::sync::RwLock<Config>>) -> anyhow::Res
 
     let _ = tray_menu.append_items(&[&item_open, &item_sync, &item_toggle, &item_quit]);
 
-    let icon_bytes = include_bytes!("../assets/icon.png");
-    let icon = load_icon(icon_bytes);
+    let icon_bytes = include_bytes!("../assets/app_icon.jpg");
+    let tray_icon_obj = load_tray_icon(icon_bytes);
+    let window_icon_obj = load_window_icon(icon_bytes);
 
     let mut tray_builder = TrayIconBuilder::new()
         .with_menu(Box::new(tray_menu))
         .with_tooltip("LidCommit - Auto-Commit on Lid Close");
 
-    if let Some(ic) = icon {
+    if let Some(ic) = tray_icon_obj {
         tray_builder = tray_builder.with_icon(ic);
     }
 
     let _tray_icon = tray_builder.build()?;
 
     // Create Hidden or Visible main Window
-    let window = WindowBuilder::new()
+    let mut win_builder = WindowBuilder::new()
         .with_title("LidCommit - Dashboard")
         .with_inner_size(tao::dpi::LogicalSize::new(880.0, 680.0))
         .with_min_inner_size(tao::dpi::LogicalSize::new(600.0, 500.0))
-        .with_visible(true)
-        .build(&event_loop)?;
+        .with_visible(true);
+
+    if let Some(win_icon) = window_icon_obj {
+        win_builder = win_builder.with_window_icon(Some(win_icon));
+    }
+
+    let window = win_builder.build(&event_loop)?;
 
     let html_content = include_str!("dashboard.html");
 
     let proxy_ipc = proxy.clone();
+    let handle_ipc = handle.clone();
     let webview = WebViewBuilder::new()
         .with_html(html_content)
         .with_ipc_handler(move |req: wry::http::Request<String>| {
             let msg = req.into_body();
-            handle_ipc_message(&msg, &proxy_ipc);
+            handle_ipc_message(&msg, &proxy_ipc, &handle_ipc);
         })
         .build(&window)?;
 
@@ -124,6 +134,7 @@ pub fn run_desktop_app(_config: Arc<tokio::sync::RwLock<Config>>) -> anyhow::Res
     let sync_id = item_sync.id().clone();
     let toggle_id = item_toggle.id().clone();
     let quit_id = item_quit.id().clone();
+    let handle_tray = handle.clone();
 
     std::thread::spawn(move || {
         let menu_channel = MenuEvent::receiver();
@@ -136,7 +147,7 @@ pub fn run_desktop_app(_config: Arc<tokio::sync::RwLock<Config>>) -> anyhow::Res
                         if event.id == open_id {
                             let _ = proxy_tray.send_event(UserEvent::ShowWindow);
                         } else if event.id == sync_id {
-                            tokio::spawn(async {
+                            handle_tray.spawn(async {
                                 crate::trigger_manual_sync().await;
                             });
                         } else if event.id == toggle_id {
@@ -159,6 +170,8 @@ pub fn run_desktop_app(_config: Arc<tokio::sync::RwLock<Config>>) -> anyhow::Res
         }
     });
 
+    let handle_loop = handle.clone();
+
     // Run the main event loop
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Wait;
@@ -167,10 +180,10 @@ pub fn run_desktop_app(_config: Arc<tokio::sync::RwLock<Config>>) -> anyhow::Res
             Event::UserEvent(UserEvent::ShowWindow) => {
                 window.set_visible(true);
                 window.set_focus();
-                trigger_data_fetch(&proxy);
+                trigger_data_fetch(&proxy, &handle_loop);
             }
             Event::UserEvent(UserEvent::UpdateData) => {
-                trigger_data_fetch(&proxy);
+                trigger_data_fetch(&proxy, &handle_loop);
             }
             Event::UserEvent(UserEvent::EvalScript(script)) => {
                 let _ = webview.evaluate_script(&script);
@@ -187,7 +200,11 @@ pub fn run_desktop_app(_config: Arc<tokio::sync::RwLock<Config>>) -> anyhow::Res
     });
 }
 
-fn handle_ipc_message(msg: &str, proxy: &EventLoopProxy<UserEvent>) {
+fn handle_ipc_message(
+    msg: &str,
+    proxy: &EventLoopProxy<UserEvent>,
+    handle: &tokio::runtime::Handle,
+) {
     if let Ok(json) = serde_json::from_str::<serde_json::Value>(msg) {
         if let Some(action) = json.get("action").and_then(|v| v.as_str()) {
             match action {
@@ -200,7 +217,7 @@ fn handle_ipc_message(msg: &str, proxy: &EventLoopProxy<UserEvent>) {
                     let _ = proxy.send_event(UserEvent::UpdateData);
                 }
                 "sync_now" => {
-                    tokio::spawn(async {
+                    handle.spawn(async {
                         crate::trigger_manual_sync().await;
                     });
                 }
@@ -213,14 +230,17 @@ fn handle_ipc_message(msg: &str, proxy: &EventLoopProxy<UserEvent>) {
     }
 }
 
-fn trigger_data_fetch(proxy: &EventLoopProxy<UserEvent>) {
+fn trigger_data_fetch(
+    proxy: &EventLoopProxy<UserEvent>,
+    handle: &tokio::runtime::Handle,
+) {
     let paused = DAEMON_PAUSED.load(Ordering::Relaxed);
     let status = if paused { "paused" } else { "running" };
 
     let history = RECENT_HISTORY.lock().unwrap().clone();
     let proxy = proxy.clone();
 
-    tokio::spawn(async move {
+    handle.spawn(async move {
         let dummy_config = crate::config::load().await.unwrap_or_default();
         let projects = crate::ide_scanner::find_open_projects(&dummy_config)
             .await
@@ -259,11 +279,23 @@ fn trigger_data_fetch(proxy: &EventLoopProxy<UserEvent>) {
     });
 }
 
-fn load_icon(bytes: &[u8]) -> Option<Icon> {
+fn load_tray_icon(bytes: &[u8]) -> Option<Icon> {
     if let Ok(img) = image::load_from_memory(bytes) {
-        let rgba = img.into_rgba8();
+        let resized = img.resize_exact(32, 32, image::imageops::FilterType::Lanczos3);
+        let rgba = resized.into_rgba8();
         let (width, height) = rgba.dimensions();
         Icon::from_rgba(rgba.into_raw(), width, height).ok()
+    } else {
+        None
+    }
+}
+
+fn load_window_icon(bytes: &[u8]) -> Option<tao::window::Icon> {
+    if let Ok(img) = image::load_from_memory(bytes) {
+        let resized = img.resize_exact(64, 64, image::imageops::FilterType::Lanczos3);
+        let rgba = resized.into_rgba8();
+        let (width, height) = rgba.dimensions();
+        tao::window::Icon::from_rgba(rgba.into_raw(), width, height).ok()
     } else {
         None
     }
