@@ -78,22 +78,22 @@ pub async fn find_open_projects(config: &Config) -> Result<Vec<Project>> {
         }
     }
 
-    // Also check VS Code's recent workspace list from its config files
-    // (catches the case where VS Code is open but args aren't visible)
+    // Also check currently opened windows in running IDEs (VS Code, Antigravity, Cursor, etc.)
     if watch_vscode {
-        let vscode_is_running = sys.processes().values().any(|p| {
-            is_vscode_process(&p.name().to_string_lossy().to_lowercase())
-        });
-        if vscode_is_running {
-            let vscode_projects = get_vscode_recent_workspaces().await;
-            for path in vscode_projects {
-                if seen_paths.insert(path.clone()) {
-                    info!("  VS Code recent workspace: {}", path);
-                    projects.push(Project {
-                        path,
-                        ide: "vscode-recent".into(),
-                    });
-                }
+        let running_proc_names: Vec<String> = sys
+            .processes()
+            .values()
+            .map(|p| p.name().to_string_lossy().to_lowercase())
+            .collect();
+
+        let vscode_projects = get_running_ide_active_workspaces(&running_proc_names).await;
+        for (path, ide_name) in vscode_projects {
+            if seen_paths.insert(path.clone()) {
+                info!("  Active {} workspace: {}", ide_name, path);
+                projects.push(Project {
+                    path,
+                    ide: ide_name,
+                });
             }
         }
     }
@@ -148,82 +148,84 @@ async fn get_project_from_process(process: &sysinfo::Process) -> Option<String> 
     None
 }
 
-/// Read VS Code and derived editors' (Antigravity, Cursor, Windsurf) workspaces from storage.json
-async fn get_vscode_recent_workspaces() -> Vec<String> {
-    let mut paths = Vec::new();
+/// Check currently open windows across IDEs (VS Code, Antigravity, Cursor, etc.)
+/// Only includes projects if that specific IDE process is currently running!
+async fn get_running_ide_active_workspaces(running_procs: &[String]) -> Vec<(String, String)> {
+    let mut results = Vec::new();
 
-    let config_dirs: Vec<std::path::PathBuf> = {
-        let mut dirs = Vec::new();
-        if let Some(config) = dirs::config_dir() {
-            let app_names = [
-                "Code",
-                "Code - Insiders",
-                "Antigravity IDE",
-                "Antigravity",
-                "Cursor",
-                "Windsurf",
-                "VSCodium",
-            ];
-            for app in app_names {
-                dirs.push(
-                    config
-                        .join(app)
-                        .join("User")
-                        .join("globalStorage")
-                        .join("storage.json"),
-                );
-            }
-        }
-        dirs
+    let ide_configs = [
+        ("Code", vec!["code", "code.exe"]),
+        ("Code - Insiders", vec!["code-insiders", "code-insiders.exe"]),
+        ("Antigravity IDE", vec!["antigravity ide", "antigravity.exe"]),
+        ("Antigravity", vec!["antigravity", "antigravity.exe"]),
+        ("Cursor", vec!["cursor", "cursor.exe"]),
+        ("Windsurf", vec!["windsurf", "windsurf.exe"]),
+        ("VSCodium", vec!["codium", "codium.exe"]),
+    ];
+
+    let config_dir = match dirs::config_dir() {
+        Some(d) => d,
+        None => return results,
     };
 
-    for storage_path in config_dirs {
-        if storage_path.exists() {
-            if let Ok(contents) = tokio::fs::read_to_string(&storage_path).await {
-                if let Ok(json) = serde_json::from_str::<serde_json::Value>(&contents) {
-                    let mut extract_uri = |folder_uri: &str| {
-                        let path = folder_uri
-                            .strip_prefix("file://")
-                            .unwrap_or(folder_uri)
-                            .to_string();
-                        let decoded = urlencoding::decode(&path)
-                            .map(|s| s.into_owned())
-                            .unwrap_or(path);
-                        let mut final_path = decoded;
-                        #[cfg(target_os = "windows")]
+    for (app_dir_name, proc_signatures) in ide_configs {
+        // Only inspect this IDE if its process is ACTUALLY running right now
+        let is_running = running_procs.iter().any(|proc_name| {
+            proc_signatures.iter().any(|&sig| proc_name.contains(sig))
+        });
+
+        if !is_running {
+            continue;
+        }
+
+        let storage_path = config_dir
+            .join(app_dir_name)
+            .join("User")
+            .join("globalStorage")
+            .join("storage.json");
+
+        if !storage_path.exists() {
+            continue;
+        }
+
+        if let Ok(contents) = tokio::fs::read_to_string(&storage_path).await {
+            if let Ok(json) = serde_json::from_str::<serde_json::Value>(&contents) {
+                let parse_uri = |folder_uri: &str| -> Option<String> {
+                    let path = folder_uri
+                        .strip_prefix("file://")
+                        .unwrap_or(folder_uri)
+                        .to_string();
+                    let decoded = urlencoding::decode(&path)
+                        .map(|s| s.into_owned())
+                        .unwrap_or(path);
+                    let mut final_path = decoded;
+                    #[cfg(target_os = "windows")]
+                    {
+                        if final_path.starts_with('/')
+                            && final_path.len() > 2
+                            && final_path.chars().nth(2) == Some(':')
                         {
-                            if final_path.starts_with('/') && final_path.len() > 2 && final_path.chars().nth(2) == Some(':') {
-                                final_path = final_path[1..].to_string();
-                            }
-                            final_path = final_path.replace('/', "\\");
+                            final_path = final_path[1..].to_string();
                         }
-                        if std::path::Path::new(&final_path).is_dir() && is_git_repo(&final_path) {
-                            paths.push(final_path);
-                        }
-                    };
-
-                    // 1. Check openedPathsList.workspaces3
-                    if let Some(workspaces) = json
-                        .get("openedPathsList")
-                        .and_then(|v| v.get("workspaces3"))
-                        .and_then(|v| v.as_array())
-                    {
-                        for ws in workspaces {
-                            if let Some(folder_uri) = ws.get("folderUri").and_then(|v| v.as_str()) {
-                                extract_uri(folder_uri);
-                            }
-                        }
+                        final_path = final_path.replace('/', "\\");
                     }
+                    if std::path::Path::new(&final_path).is_dir() && is_git_repo(&final_path) {
+                        Some(final_path)
+                    } else {
+                        None
+                    }
+                };
 
-                    // 2. Check backupWorkspaces.folders (currently open windows in VS Code / Antigravity IDE)
-                    if let Some(folders) = json
-                        .get("backupWorkspaces")
-                        .and_then(|v| v.get("folders"))
-                        .and_then(|v| v.as_array())
-                    {
-                        for f in folders {
-                            if let Some(folder_uri) = f.get("folderUri").and_then(|v| v.as_str()) {
-                                extract_uri(folder_uri);
+                // Look at `windowsState.openedWindows` — these are the windows that are currently OPEN in this running IDE
+                if let Some(opened) = json
+                    .get("windowsState")
+                    .and_then(|v| v.get("openedWindows"))
+                    .and_then(|v| v.as_array())
+                {
+                    for win in opened {
+                        if let Some(folder_uri) = win.get("folder").and_then(|v| v.as_str()) {
+                            if let Some(valid_path) = parse_uri(folder_uri) {
+                                results.push((valid_path, app_dir_name.to_lowercase()));
                             }
                         }
                     }
@@ -232,7 +234,7 @@ async fn get_vscode_recent_workspaces() -> Vec<String> {
         }
     }
 
-    paths
+    results
 }
 
 /// Quickly check if a directory is a git repo (has a .git folder/file)
