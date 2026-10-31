@@ -377,30 +377,132 @@
       border: 1px solid rgba(249, 115, 22, 0.4);
     }
 
-    /* History Feed */
+    /* History & Activity Feed Styles */
+    .history-stats-bar {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .history-stat-card {
+      background: #090909;
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .history-stat-num {
+      font-size: 22px;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -0.02em;
+    }
+
+    .history-stat-label {
+      font-size: 11px;
+      color: var(--text-sub);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 600;
+    }
+
+    .history-filter-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .filter-chip {
+      padding: 5px 12px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-sub);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .filter-chip:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+    }
+
+    .filter-chip.active {
+      background: rgba(37, 99, 235, 0.15);
+      border-color: var(--brand-blue);
+      color: var(--brand-blue-light);
+      box-shadow: 0 0 12px var(--brand-blue-glow);
+    }
+
     .history-item {
-      padding: 12px 16px;
+      padding: 14px 18px;
       border-left: 3px solid var(--brand-blue);
       background: #090909;
       border-top: 1px solid var(--border-subtle);
       border-right: 1px solid var(--border-subtle);
       border-bottom: 1px solid var(--border-subtle);
-      margin-bottom: 10px;
-      border-radius: 0 8px 8px 0;
+      margin-bottom: 12px;
+      border-radius: 0 10px 10px 0;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .history-item:hover {
+      background: #111111;
+      border-color: rgba(37, 99, 235, 0.35);
+      transform: translateX(2px);
     }
 
     .history-header {
       display: flex;
       justify-content: space-between;
+      align-items: center;
       font-size: 12px;
       color: var(--text-dim);
-      margin-bottom: 4px;
+      margin-bottom: 6px;
     }
 
     .history-message {
-      font-size: 13px;
-      font-weight: 500;
-      color: #e4e4e7;
+      font-size: 13.5px;
+      font-weight: 600;
+      color: #f4f4f5;
+      line-height: 1.45;
+      word-break: break-word;
+    }
+
+    .history-footer {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 8px;
+      font-size: 11px;
+      color: var(--text-sub);
+    }
+
+    .hash-badge {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      cursor: pointer;
+    }
+
+    .hash-badge:hover {
+      background: rgba(37, 99, 235, 0.2);
+      border-color: var(--brand-blue);
+      color: var(--brand-blue-light);
     }
 
     /* Forms */
@@ -659,12 +761,40 @@
 
     <!-- HISTORY TAB -->
     <div id="tab-history" style="display: none;">
+      <!-- Stats Overview -->
+      <div class="history-stats-bar">
+        <div class="history-stat-card" style="border-left: 3px solid var(--brand-blue);">
+          <span class="history-stat-num" id="statTotalCommits">0</span>
+          <span class="history-stat-label">Total Sync Events</span>
+        </div>
+        <div class="history-stat-card" style="border-left: 3px solid var(--brand-green);">
+          <span class="history-stat-num" id="statLidCommits">0</span>
+          <span class="history-stat-label">Auto Lid Commits</span>
+        </div>
+        <div class="history-stat-card" style="border-left: 3px solid var(--brand-orange);">
+          <span class="history-stat-num" id="statActiveRepos">0</span>
+          <span class="history-stat-label">Repositories Synced</span>
+        </div>
+      </div>
+
       <div class="card">
         <div class="card-title">
-          <span>Recent Automated Commits</span>
+          <span>📜 Commit Log &amp; Activity Timeline</span>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-secondary" style="font-size: 12px; padding: 4px 10px;" onclick="refreshData()">🔄 Refresh Log</button>
+          </div>
         </div>
+
+        <!-- Filter Chips -->
+        <div class="history-filter-bar">
+          <button class="filter-chip active" id="filter-all" onclick="setHistoryFilter('all')">All Activity</button>
+          <button class="filter-chip" id="filter-lid" onclick="setHistoryFilter('lid')">🔒 Lid Auto-Commits</button>
+          <button class="filter-chip" id="filter-recent" onclick="setHistoryFilter('git')">📁 Repository Git Commits</button>
+          <input type="text" id="historySearch" placeholder="Search commit messages or repo names..." oninput="filterHistoryList()" class="form-input" style="flex: 1; min-width: 200px; padding: 6px 12px; font-size: 12px; margin-bottom: 0;">
+        </div>
+
         <div id="historyList">
-          <div style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 24px;">No auto-commits recorded yet in this session.</div>
+          <div style="color: var(--text-dim); font-size: 13px; text-align: center; padding: 32px;">Loading commit activity...</div>
         </div>
       </div>
     </div>
@@ -967,14 +1097,35 @@
       }
     }
 
+    let currentSessionHistory = [];
+    let currentGitCommits = [];
+    let activeHistoryFilter = 'all';
+
+    function setHistoryFilter(filter) {
+      activeHistoryFilter = filter;
+      document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+      const activeBtn = document.getElementById('filter-' + filter);
+      if (activeBtn) activeBtn.classList.add('active');
+      renderCombinedHistory();
+    }
+
+    function filterHistoryList() {
+      renderCombinedHistory();
+    }
+
     // Called from Rust via evaluate_script or IPC messages
     window.updateDashboard = function(data) {
       if (data.projects) {
         renderProjects(data.projects);
       }
       if (data.history) {
-        renderHistory(data.history);
+        currentSessionHistory = data.history;
       }
+      if (data.git_commits) {
+        currentGitCommits = data.git_commits;
+      }
+      renderCombinedHistory();
+
       if (data.config) {
         applyConfigToUI(data.config);
       }
@@ -1048,21 +1199,111 @@
       `).join('');
     }
 
-    function renderHistory(history) {
+    function renderCombinedHistory() {
       const container = document.getElementById('historyList');
-      if (!history || history.length === 0) {
-        container.innerHTML = '<div style="color: var(--text-dim); font-size: 13px; text-align: center; padding: 28px;">No auto-commits recorded yet in this session.</div>';
+      const searchQuery = (document.getElementById('historySearch')?.value || '').toLowerCase().trim();
+
+      // Combine session sync events and git commits
+      let items = [];
+
+      // Add session commits
+      currentSessionHistory.forEach(h => {
+        items.push({
+          type: 'session',
+          project_name: h.project_name,
+          message: h.commit_message || h.error || "Auto-commit processed",
+          time: h.time,
+          committed: h.committed,
+          files_changed: h.files_changed,
+          is_lid_commit: true,
+          hash: null,
+          author: null,
+        });
+      });
+
+      // Add real repository commits
+      currentGitCommits.forEach(c => {
+        items.push({
+          type: 'git',
+          project_name: c.project_name,
+          message: c.message,
+          time: c.date || c.relative_time,
+          committed: true,
+          files_changed: null,
+          is_lid_commit: c.is_lid_commit,
+          hash: c.hash,
+          author: c.author,
+        });
+      });
+
+      // Update Top Stats
+      const totalCount = items.length;
+      const lidCount = items.filter(i => i.is_lid_commit).length;
+      const uniqueRepos = new Set(items.map(i => i.project_name)).size;
+
+      document.getElementById('statTotalCommits').textContent = totalCount;
+      document.getElementById('statLidCommits').textContent = lidCount;
+      document.getElementById('statActiveRepos').textContent = uniqueRepos;
+
+      // Filter by chip category
+      if (activeHistoryFilter === 'lid') {
+        items = items.filter(i => i.is_lid_commit);
+      } else if (activeHistoryFilter === 'git') {
+        items = items.filter(i => i.type === 'git');
+      }
+
+      // Filter by search text
+      if (searchQuery) {
+        items = items.filter(i => 
+          i.message.toLowerCase().includes(searchQuery) || 
+          i.project_name.toLowerCase().includes(searchQuery) ||
+          (i.hash && i.hash.toLowerCase().includes(searchQuery))
+        );
+      }
+
+      if (items.length === 0) {
+        container.innerHTML = '<div style="color: var(--text-dim); font-size: 13px; text-align: center; padding: 36px;">No commits match the selected filter.</div>';
         return;
       }
-      container.innerHTML = history.map(h => `
-        <div class="history-item" style="border-left-color: ${h.committed ? 'var(--brand-green)' : 'var(--brand-orange)'};">
-          <div class="history-header">
-            <span><strong style="color: #fff;">${h.project_name}</strong> • ${h.time}</span>
-            <span style="color: var(--brand-blue-light);">${h.files_changed} file(s)</span>
+
+      container.innerHTML = items.map(item => {
+        const isLid = item.is_lid_commit;
+        const borderColor = isLid ? 'var(--brand-green)' : 'var(--brand-blue)';
+        const badgeTag = isLid 
+          ? `<span class="badge" style="background: rgba(16, 185, 129, 0.15); color: var(--brand-green-light); border-color: rgba(16, 185, 129, 0.35);">🔒 Lid Auto-Save</span>`
+          : `<span class="badge" style="background: rgba(37, 99, 235, 0.15); color: var(--brand-blue-light); border-color: rgba(37, 99, 235, 0.35);">Git Commit</span>`;
+
+        return `
+          <div class="history-item" style="border-left-color: ${borderColor};">
+            <div class="history-header">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <strong style="color: #ffffff; font-size: 13px;">📁 ${item.project_name}</strong>
+                ${badgeTag}
+              </div>
+              <span style="color: var(--text-dim); font-size: 11px;">🕒 ${item.time}</span>
+            </div>
+
+            <div class="history-message">${escapeHtml(item.message)}</div>
+
+            <div class="history-footer">
+              ${item.hash ? `<span class="hash-badge" title="Commit Hash">#${item.hash}</span>` : ''}
+              ${item.author ? `<span style="color: var(--text-sub);">👤 ${item.author}</span>` : ''}
+              ${item.files_changed !== null && item.files_changed !== undefined ? `<span style="color: var(--brand-blue-light);">📄 ${item.files_changed} file(s) changed</span>` : ''}
+              <span style="color: var(--brand-green-light); margin-left: auto;">✓ Synced</span>
+            </div>
           </div>
-          <div class="history-message">${h.commit_message || h.error || "Auto-commit processed"}</div>
-        </div>
-      `).join('');
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(text) {
+      if (!text) return "";
+      return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
     }
 
     // Auto-refresh upon start

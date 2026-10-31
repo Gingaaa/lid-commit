@@ -337,7 +337,7 @@ fn trigger_data_fetch(
             .unwrap_or_default();
 
         let mut project_payload = Vec::new();
-        for p in projects {
+        for p in &projects {
             let name = p
                 .path
                 .split(['/', '\\'])
@@ -361,6 +361,32 @@ fn trigger_data_fetch(
             }));
         }
 
+        let mut project_commits = Vec::new();
+
+        for p in &projects {
+            let name = p
+                .path
+                .split(['/', '\\'])
+                .last()
+                .unwrap_or("project")
+                .to_string();
+
+            if let Ok(commits) = crate::git::get_recent_commits(&p.path, 15).await {
+                for c in commits {
+                    project_commits.push(serde_json::json!({
+                        "project_name": name,
+                        "project_path": p.path,
+                        "hash": c.hash,
+                        "author": c.author,
+                        "date": c.date,
+                        "relative_time": c.relative_time,
+                        "message": c.message,
+                        "is_lid_commit": c.is_lid_commit,
+                    }));
+                }
+            }
+        }
+
         let config_payload = serde_json::json!({
             "push": dummy_config.git.push,
             "notify": dummy_config.general.notify_on_success,
@@ -376,6 +402,7 @@ fn trigger_data_fetch(
             "status": status,
             "projects": project_payload,
             "history": history,
+            "git_commits": project_commits,
             "config": config_payload,
         });
 

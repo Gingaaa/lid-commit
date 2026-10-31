@@ -160,6 +160,46 @@ pub async fn commit_and_push(path: &str, message: &str, push: bool) -> Result<bo
     Ok(false)
 }
 
+/// Detailed commit log entry from git log
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct GitCommitLog {
+    pub hash: String,
+    pub author: String,
+    pub date: String,
+    pub relative_time: String,
+    pub message: String,
+    pub is_lid_commit: bool,
+}
+
+/// Fetch recent commits from a repository
+pub async fn get_recent_commits(path: &str, limit: usize) -> Result<Vec<GitCommitLog>> {
+    let limit_arg = format!("-n{}", limit);
+    // Use format: hash|author|date(iso)|relative_date|subject
+    let log_format = "--pretty=format:%h|%an|%ad|%ar|%s";
+    let date_arg = "--date=format:%Y-%m-%d %H:%M";
+
+    let output = run_git(path, &["log", &limit_arg, log_format, date_arg]).await?;
+    let mut entries = Vec::new();
+
+    for line in output.lines() {
+        let parts: Vec<&str> = line.splitn(5, '|').collect();
+        if parts.len() == 5 {
+            let message = parts[4].to_string();
+            let is_lid_commit = message.contains("lid-close") || message.contains("LidCommit") || message.contains("🔒") || message.contains("auto-save");
+            entries.push(GitCommitLog {
+                hash: parts[0].to_string(),
+                author: parts[1].to_string(),
+                date: parts[2].to_string(),
+                relative_time: parts[3].to_string(),
+                message,
+                is_lid_commit,
+            });
+        }
+    }
+
+    Ok(entries)
+}
+
 /// Run a git command in the given directory and return its stdout
 async fn run_git(path: &str, args: &[&str]) -> Result<String> {
     let mut cmd = tokio::process::Command::new("git");
