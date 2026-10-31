@@ -60,32 +60,64 @@ When you launch `lid-commit.exe`, it docks in your system tray and displays the 
 | **📜 Activity & History** | Live feed of recent automated commits with timestamp and file count. |
 | **⚙️ Configuration** | Configure AI providers (Gemini / OpenAI / Ollama), push settings, and safety thresholds. |
 
+## 📦 Easy Download & Installation
+
+LidCommit installs just like any standard modern application — **zero technical setup, compiling, or Rust installations required for end users!**
+
+### 🪟 Windows (Recommended: 1-Click Setup Installer)
+
+1. **Download** the latest **[`LidCommit-Setup-x86_64.exe`](https://github.com/Gingaaa/lid-commit/releases/latest)** installer from GitHub Releases.
+2. Double-click the `.exe` and follow the setup wizard:
+   - Installs cleanly into your Windows Apps directory (`%LocalAppData%\Programs\LidCommit`).
+   - Automatically registers **LidCommit** in your **Windows Start Menu** and creates an optional **Desktop Shortcut**.
+   - Optional: Check *"Automatically launch LidCommit on Windows startup"* so your work is always protected.
+   - Clean, standard uninstaller registered in Windows *Installed apps / Add or remove programs*.
+3. Launch **LidCommit** from your Start menu or system tray!
+
+> *Alternatively, portable standalone zip packages (`lid-commit-windows-x86_64.zip`) are also available under [GitHub Releases](https://github.com/Gingaaa/lid-commit/releases).*
+
 ---
 
-## 🚀 Quick Start
+### 🍎 macOS (Pre-Built Binary)
 
-### 1. Prerequisites
+1. Download `lid-commit-macos-aarch64.tar.gz` (Apple Silicon M1/M2/M3) or `lid-commit-macos-x86_64.tar.gz` (Intel) from [Releases](https://github.com/Gingaaa/lid-commit/releases/latest).
+2. Extract and move `lid-commit` into `/usr/local/bin` or your `Applications` folder:
+   ```bash
+   tar -xvf lid-commit-macos-*.tar.gz
+   sudo mv lid-commit /usr/local/bin/
+   ```
+3. Run `lid-commit` from terminal, or add it to macOS *Login Items* for automatic background protection.
 
-- [Rust toolchain](https://rustup.rs/) (v1.75+)
-- `git` in your system PATH
-- A [Google Gemini API key](https://aistudio.google.com/app/apikey) (free) or OpenAI key
+---
 
-### 2. Build & Run
+### 🐧 Linux (Pre-Built Binary)
+
+1. Download `lid-commit-linux-x86_64.tar.gz` from [Releases](https://github.com/Gingaaa/lid-commit/releases/latest).
+2. Extract and install:
+   ```bash
+   tar -xvf lid-commit-linux-x86_64.tar.gz
+   sudo mv lid-commit /usr/local/bin/
+   ```
+3. (Optional) Run as a `systemd` user service to keep it running smoothly in the background.
+
+---
+
+### 🛠️ Build from Source (For Developers & Contributors)
+
+If you are developing or contributing to LidCommit:
 
 ```bash
+# Ensure Rust toolchain (v1.75+) is installed
 git clone https://github.com/Gingaaa/lid-commit.git
 cd lid-commit
 cargo build --release
+
+# Run GUI dashboard:
+./target/release/lid-commit
+
+# To build the Windows Inno Setup installer:
+iscc installer.iss
 ```
-
-Run the desktop application:
-```powershell
-.\target\release\lid-commit.exe
-```
-
-*(To run silently in background headless mode without the dashboard window, use `lid-commit.exe --headless`)*
-
----
 
 ### 3. Configure Your AI Key
 
