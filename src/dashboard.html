@@ -366,6 +366,123 @@
       accent-color: var(--primary);
     }
 
+    /* AI Provider Cards Grid */
+    .provider-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .provider-card {
+      border: 1px solid var(--card-border);
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 10px;
+      padding: 14px;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .provider-card:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(99, 102, 241, 0.4);
+      transform: translateY(-1px);
+    }
+
+    .provider-card.active {
+      border-color: var(--accent);
+      background: rgba(99, 102, 241, 0.1);
+      box-shadow: 0 0 16px rgba(56, 189, 248, 0.15);
+    }
+
+    .provider-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .provider-card-title {
+      font-size: 14px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .provider-badge {
+      font-size: 10px;
+      padding: 2px 7px;
+      border-radius: 9999px;
+      font-weight: 600;
+    }
+
+    .provider-card-desc {
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    .provider-radio-indicator {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 2px solid var(--card-border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .provider-card.active .provider-radio-indicator {
+      border-color: var(--accent);
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+    }
+
+    .provider-config-box {
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: 10px;
+      padding: 16px;
+      margin-top: 14px;
+      margin-bottom: 18px;
+      animation: fadeIn 0.25s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .password-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .password-wrapper input {
+      padding-right: 40px;
+    }
+
+    .toggle-visibility-btn {
+      position: absolute;
+      right: 10px;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 14px;
+      padding: 4px;
+    }
+
+    .toggle-visibility-btn:hover {
+      color: #fff;
+    }
+
     /* Footer */
     footer {
       padding: 12px 28px;
@@ -439,8 +556,143 @@
     <!-- SETTINGS TAB -->
     <div id="tab-settings" style="display: none;">
       <div class="card">
-        <div class="card-title">LidCommit Preferences</div>
-        
+        <div class="card-title">🤖 AI Commit Message Provider</div>
+        <div class="form-desc" style="margin-bottom: 14px;">
+          Choose which AI engine writes your commit summaries from git diffs. Only <strong>one active provider</strong> is used at a time. If an API key or local service is unavailable, LidCommit automatically falls back to clean timestamped auto-saves.
+        </div>
+
+        <!-- 4-Provider Toggle Grid -->
+        <div class="provider-grid">
+          <!-- Gemini -->
+          <div class="provider-card active" id="card-gemini" onclick="selectAiProvider('gemini')">
+            <div class="provider-card-header">
+              <span class="provider-card-title">
+                <span>✨ Google Gemini</span>
+              </span>
+              <div class="provider-radio-indicator"></div>
+            </div>
+            <div class="provider-card-desc">
+              Recommended • Ultra-fast, context-rich diff analysis via Gemini 2.0 Flash (free key available).
+            </div>
+            <div style="margin-top: 6px;">
+              <span class="provider-badge" style="background: rgba(56, 189, 248, 0.2); color: #7dd3fc;">Default</span>
+              <span class="provider-badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399;">Cloud AI</span>
+            </div>
+          </div>
+
+          <!-- Ollama -->
+          <div class="provider-card" id="card-ollama" onclick="selectAiProvider('ollama')">
+            <div class="provider-card-header">
+              <span class="provider-card-title">
+                <span>🦙 Ollama Local</span>
+              </span>
+              <div class="provider-radio-indicator"></div>
+            </div>
+            <div class="provider-card-desc">
+              100% Offline • Zero cloud dependencies, private local inference via Llama 3.2 or Mistral.
+            </div>
+            <div style="margin-top: 6px;">
+              <span class="provider-badge" style="background: rgba(168, 85, 247, 0.2); color: #c084fc;">No API Key</span>
+              <span class="provider-badge" style="background: rgba(34, 197, 94, 0.15); color: #4ade80;">Private</span>
+            </div>
+          </div>
+
+          <!-- OpenAI -->
+          <div class="provider-card" id="card-openai" onclick="selectAiProvider('openai')">
+            <div class="provider-card-header">
+              <span class="provider-card-title">
+                <span>🧠 OpenAI</span>
+              </span>
+              <div class="provider-radio-indicator"></div>
+            </div>
+            <div class="provider-card-desc">
+              Industry standard • Uses GPT-4o-mini for concise, conventional commit message conventions.
+            </div>
+            <div style="margin-top: 6px;">
+              <span class="provider-badge" style="background: rgba(14, 165, 233, 0.15); color: #38bdf8;">GPT-4o-mini</span>
+              <span class="provider-badge" style="background: rgba(255, 255, 255, 0.1); color: #e2e8f0;">Cloud AI</span>
+            </div>
+          </div>
+
+          <!-- Offline Fallback -->
+          <div class="provider-card" id="card-fallback" onclick="selectAiProvider('fallback')">
+            <div class="provider-card-header">
+              <span class="provider-card-title">
+                <span>⏰ Clean Auto-Save</span>
+              </span>
+              <div class="provider-radio-indicator"></div>
+            </div>
+            <div class="provider-card-desc">
+              Zero Config • Standardized timestamp commit messages without calling any external LLM.
+            </div>
+            <div style="margin-top: 6px;">
+              <span class="provider-badge" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24;">No API Key</span>
+              <span class="provider-badge" style="background: rgba(148, 163, 184, 0.2); color: #cbd5e1;">Instant</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dynamic Provider Configuration Box -->
+        <div id="providerConfigBox" class="provider-config-box">
+          <!-- Gemini Config Form -->
+          <div id="cfgPanel-gemini">
+            <div class="form-group">
+              <label class="form-label">Google Gemini API Key</label>
+              <div class="form-desc">Get a free key instantly from <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: var(--accent);">Google AI Studio</a>. (Leave empty to use <code>GEMINI_API_KEY</code> environment variable)</div>
+              <div class="password-wrapper">
+                <input type="password" id="geminiApiKey" class="form-input" placeholder="AIzaSy...">
+                <button type="button" class="toggle-visibility-btn" onclick="togglePasswordVisibility('geminiApiKey')">👁️</button>
+              </div>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label">Model Name</label>
+              <input type="text" id="geminiModel" class="form-input" value="gemini-2.0-flash" placeholder="gemini-2.0-flash">
+            </div>
+          </div>
+
+          <!-- Ollama Config Form -->
+          <div id="cfgPanel-ollama" style="display: none;">
+            <div class="form-group">
+              <label class="form-label">Ollama Instance URL</label>
+              <div class="form-desc">The local address where your Ollama server is running (default: <code>http://localhost:11434</code>)</div>
+              <input type="text" id="ollamaEndpoint" class="form-input" value="http://localhost:11434" placeholder="http://localhost:11434">
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label">Local Model Tag</label>
+              <div class="form-desc">Model loaded in Ollama (e.g., <code>llama3.2</code>, <code>codellama</code>, <code>mistral</code>)</div>
+              <input type="text" id="ollamaModel" class="form-input" value="llama3.2" placeholder="llama3.2">
+            </div>
+          </div>
+
+          <!-- OpenAI Config Form -->
+          <div id="cfgPanel-openai" style="display: none;">
+            <div class="form-group">
+              <label class="form-label">OpenAI API Key</label>
+              <div class="form-desc">Enter your OpenAI secret key (or set <code>OPENAI_API_KEY</code> in your environment)</div>
+              <div class="password-wrapper">
+                <input type="password" id="openaiApiKey" class="form-input" placeholder="sk-...">
+                <button type="button" class="toggle-visibility-btn" onclick="togglePasswordVisibility('openaiApiKey')">👁️</button>
+              </div>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label">Model Name</label>
+              <input type="text" id="openaiModel" class="form-input" value="gpt-4o-mini" placeholder="gpt-4o-mini">
+            </div>
+          </div>
+
+          <!-- Fallback Panel -->
+          <div id="cfgPanel-fallback" style="display: none;">
+            <div style="font-size: 13px; color: #a5b4fc; display: flex; align-items: center; gap: 8px;">
+              <span>ℹ️</span>
+              <span>LidCommit will generate clean timestamp commits: <code>[Prefix] auto-save at YYYY-MM-DD HH:MM</code> with zero network calls.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-title" style="margin-top: 24px; border-top: 1px solid var(--card-border); padding-top: 18px;">
+          ⚙️ General Preferences &amp; Safety
+        </div>
+
         <div class="form-group">
           <label class="form-checkbox">
             <input type="checkbox" id="cfgPush" checked>
@@ -456,16 +708,6 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label">AI Message Provider</label>
-          <div class="form-desc">Select which LLM powers your contextual git commit messages.</div>
-          <select id="cfgAiProvider" class="form-select">
-            <option value="gemini">Google Gemini (gemini-2.0-flash)</option>
-            <option value="openai">OpenAI (gpt-4o-mini)</option>
-            <option value="ollama">Ollama (Local Offline LLM)</option>
-          </select>
-        </div>
-
-        <div class="form-group">
           <label class="form-label">Commit Message Prefix</label>
           <input type="text" id="cfgPrefix" class="form-input" value="🔒 lid-close:">
         </div>
@@ -476,7 +718,10 @@
           <input type="number" id="cfgMaxFiles" class="form-input" value="50">
         </div>
 
-        <button class="btn btn-primary" onclick="saveSettings()">💾 Save Settings</button>
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 20px;">
+          <button class="btn btn-primary" onclick="saveSettings()">💾 Save Preferences</button>
+          <span id="saveStatusIndicator" style="font-size: 12px; color: #34d399; opacity: 0; transition: opacity 0.3s;">✓ Saved successfully</span>
+        </div>
       </div>
     </div>
   </div>
@@ -540,16 +785,64 @@
       sendToHost("get_status");
     }
 
+    let selectedAiProvider = "gemini";
+
+    function selectAiProvider(provider) {
+      selectedAiProvider = provider;
+      
+      // Update card visual states
+      document.querySelectorAll('.provider-card').forEach(c => c.classList.remove('active'));
+      const activeCard = document.getElementById('card-' + provider);
+      if (activeCard) activeCard.classList.add('active');
+
+      // Toggle configuration panel visibility
+      const panels = ['gemini', 'ollama', 'openai', 'fallback'];
+      panels.forEach(p => {
+        const el = document.getElementById('cfgPanel-' + p);
+        if (el) el.style.display = (p === provider) ? 'block' : 'none';
+      });
+    }
+
+    function togglePasswordVisibility(inputId) {
+      const input = document.getElementById(inputId);
+      if (!input) return;
+      input.type = input.type === 'password' ? 'text' : 'password';
+    }
+
     function saveSettings() {
+      let apiKey = "";
+      let model = "";
+
+      if (selectedAiProvider === "gemini") {
+        apiKey = document.getElementById('geminiApiKey').value;
+        model = document.getElementById('geminiModel').value;
+      } else if (selectedAiProvider === "openai") {
+        apiKey = document.getElementById('openaiApiKey').value;
+        model = document.getElementById('openaiModel').value;
+      } else if (selectedAiProvider === "ollama") {
+        model = document.getElementById('ollamaModel').value;
+      }
+
+      const ollamaUrl = document.getElementById('ollamaEndpoint').value;
+
       const payload = {
         push: document.getElementById('cfgPush').checked,
         notify: document.getElementById('cfgNotify').checked,
-        ai_provider: document.getElementById('cfgAiProvider').value,
+        ai_provider: selectedAiProvider,
+        api_key: apiKey,
+        ollama_url: ollamaUrl,
+        model: model,
         commit_prefix: document.getElementById('cfgPrefix').value,
         max_files: parseInt(document.getElementById('cfgMaxFiles').value, 10) || 50
       };
+
       sendToHost("save_settings", payload);
-      alert("Settings saved successfully!");
+
+      const indicator = document.getElementById('saveStatusIndicator');
+      if (indicator) {
+        indicator.style.opacity = '1';
+        setTimeout(() => { indicator.style.opacity = '0'; }, 2500);
+      }
     }
 
     // Called from Rust via evaluate_script or IPC messages
@@ -559,6 +852,9 @@
       }
       if (data.history) {
         renderHistory(data.history);
+      }
+      if (data.config) {
+        applyConfigToUI(data.config);
       }
       if (data.status) {
         daemonState = data.status;
@@ -577,6 +873,31 @@
       }
       document.getElementById('lastScanTime').textContent = "Last sync: " + new Date().toLocaleTimeString();
     };
+
+    function applyConfigToUI(cfg) {
+      if (cfg.ai_provider) {
+        selectAiProvider(cfg.ai_provider);
+      }
+      if (cfg.api_key !== undefined) {
+        if (cfg.ai_provider === 'gemini') {
+          document.getElementById('geminiApiKey').value = cfg.api_key;
+        } else if (cfg.ai_provider === 'openai') {
+          document.getElementById('openaiApiKey').value = cfg.api_key;
+        }
+      }
+      if (cfg.ollama_url) {
+        document.getElementById('ollamaEndpoint').value = cfg.ollama_url;
+      }
+      if (cfg.model) {
+        if (cfg.ai_provider === 'gemini') document.getElementById('geminiModel').value = cfg.model;
+        if (cfg.ai_provider === 'openai') document.getElementById('openaiModel').value = cfg.model;
+        if (cfg.ai_provider === 'ollama') document.getElementById('ollamaModel').value = cfg.model;
+      }
+      if (cfg.push !== undefined) document.getElementById('cfgPush').checked = cfg.push;
+      if (cfg.notify !== undefined) document.getElementById('cfgNotify').checked = cfg.notify;
+      if (cfg.commit_prefix) document.getElementById('cfgPrefix').value = cfg.commit_prefix;
+      if (cfg.max_files) document.getElementById('cfgMaxFiles').value = cfg.max_files;
+    }
 
     function renderProjects(projects) {
       const container = document.getElementById('projectList');

@@ -40,14 +40,24 @@ impl Default for GeneralConfig {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct AiConfig {
-    /// AI provider: "gemini", "openai", "ollama"
+    /// AI provider: "gemini", "openai", "claude", "ollama", "fallback"
     pub provider: String,
     /// Environment variable name that holds the API key
     pub api_key_env: String,
+    /// Direct API key stored in config (optional, takes precedence if set)
+    #[serde(default)]
+    pub api_key: Option<String>,
+    /// Ollama endpoint URL (default: http://localhost:11434)
+    #[serde(default = "default_ollama_url")]
+    pub ollama_url: String,
     /// Model name
     pub model: String,
     /// Max lines of diff to send to AI (to avoid token limits)
     pub max_diff_lines: usize,
+}
+
+fn default_ollama_url() -> String {
+    "http://localhost:11434".into()
 }
 
 impl Default for AiConfig {
@@ -55,6 +65,8 @@ impl Default for AiConfig {
         Self {
             provider: "gemini".into(),
             api_key_env: "GEMINI_API_KEY".into(),
+            api_key: None,
+            ollama_url: default_ollama_url(),
             model: "gemini-2.0-flash".into(),
             max_diff_lines: 200,
         }
@@ -173,3 +185,23 @@ pub async fn write_default() -> Result<PathBuf> {
 
     Ok(path)
 }
+
+/// Save config to disk (creates directories if necessary)
+pub async fn save(config: &Config) -> Result<()> {
+    let path = config_path();
+
+    if let Some(parent) = path.parent() {
+        tokio::fs::create_dir_all(parent).await?;
+    }
+
+    let toml_string = toml::to_string_pretty(config)
+        .context("Failed to serialize configuration to TOML")?;
+
+    tokio::fs::write(&path, toml_string)
+        .await
+        .with_context(|| format!("Failed to write configuration file at {:?}", path))?;
+
+    info!("Configuration successfully saved to {:?}", path);
+    Ok(())
+}
+

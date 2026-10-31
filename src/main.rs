@@ -116,7 +116,8 @@ async fn main() -> Result<()> {
                 last_close_time = Some(std::time::Instant::now());
 
                 info!("🔒 Lid close / sleep detected! Starting auto-commit process...");
-                match handle_lid_close(&config).await {
+                let active_config = config::load().await.unwrap_or_else(|_| config.clone());
+                match handle_lid_close(&active_config).await {
                     Ok(results) => {
                         gui::record_history(&results);
                         let committed: Vec<_> = results.iter().filter(|r| r.committed).collect();

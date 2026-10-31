@@ -265,6 +265,55 @@ fn handle_ipc_message(
                 "get_status" => {
                     let _ = proxy.send_event(UserEvent::UpdateData);
                 }
+                "save_settings" => {
+                    let json_clone = json.clone();
+                    let proxy_clone = proxy.clone();
+                    handle.spawn(async move {
+                        let mut current_config = crate::config::load().await.unwrap_or_default();
+                        
+                        if let Some(push) = json_clone.get("push").and_then(|v| v.as_bool()) {
+                            current_config.git.push = push;
+                            current_config.general.push_after_commit = push;
+                        }
+                        if let Some(notify) = json_clone.get("notify").and_then(|v| v.as_bool()) {
+                            current_config.general.notify_on_success = notify;
+                            current_config.general.notify_on_failure = notify;
+                        }
+                        if let Some(provider) = json_clone.get("ai_provider").and_then(|v| v.as_str()) {
+                            current_config.ai.provider = provider.to_string();
+                        }
+                        if let Some(key) = json_clone.get("api_key").and_then(|v| v.as_str()) {
+                            if !key.trim().is_empty() {
+                                current_config.ai.api_key = Some(key.trim().to_string());
+                            } else {
+                                current_config.ai.api_key = None;
+                            }
+                        }
+                        if let Some(url) = json_clone.get("ollama_url").and_then(|v| v.as_str()) {
+                            if !url.trim().is_empty() {
+                                current_config.ai.ollama_url = url.trim().to_string();
+                            }
+                        }
+                        if let Some(model) = json_clone.get("model").and_then(|v| v.as_str()) {
+                            if !model.trim().is_empty() {
+                                current_config.ai.model = model.trim().to_string();
+                            }
+                        }
+                        if let Some(prefix) = json_clone.get("commit_prefix").and_then(|v| v.as_str()) {
+                            current_config.git.commit_prefix = prefix.to_string();
+                        }
+                        if let Some(max_files) = json_clone.get("max_files").and_then(|v| v.as_u64()) {
+                            current_config.safety.max_files_changed = max_files as usize;
+                        }
+
+                        if let Err(e) = crate::config::save(&current_config).await {
+                            tracing::error!("Failed to save settings: {}", e);
+                        } else {
+                            tracing::info!("Updated configuration saved successfully");
+                        }
+                        let _ = proxy_clone.send_event(UserEvent::UpdateData);
+                    });
+                }
                 _ => {}
             }
         }
@@ -312,10 +361,22 @@ fn trigger_data_fetch(
             }));
         }
 
+        let config_payload = serde_json::json!({
+            "push": dummy_config.git.push,
+            "notify": dummy_config.general.notify_on_success,
+            "ai_provider": dummy_config.ai.provider,
+            "api_key": dummy_config.ai.api_key.unwrap_or_default(),
+            "ollama_url": dummy_config.ai.ollama_url,
+            "model": dummy_config.ai.model,
+            "commit_prefix": dummy_config.git.commit_prefix,
+            "max_files": dummy_config.safety.max_files_changed,
+        });
+
         let data = serde_json::json!({
             "status": status,
             "projects": project_payload,
             "history": history,
+            "config": config_payload,
         });
 
         let script = format!("if (window.updateDashboard) {{ window.updateDashboard({}); }}", data);
