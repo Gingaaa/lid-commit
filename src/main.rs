@@ -30,6 +30,22 @@ pub async fn trigger_manual_sync() {
     }
 }
 
+pub async fn trigger_project_sync(path: &str) {
+    let dummy_config = match config::load().await {
+        Ok(c) => c,
+        Err(_) => config::Config::default(),
+    };
+    info!("⚡ Direct project sync requested for: {}", path);
+    let proj = ide_scanner::Project {
+        path: path.to_string(),
+        ide: "manual".into(),
+    };
+    let result = process_project(&dummy_config, &proj).await;
+    gui::record_history(&[result.clone()]);
+    notifier::record_commit_status(&[result.clone()], None);
+    notifier::notify_results(&[result]).await;
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     // Initialize logging
@@ -173,6 +189,19 @@ async fn handle_lid_close(config: &config::Config) -> Result<Vec<CommitResult>> 
 
     // 2. For each project, attempt auto-commit
     for project in projects {
+        if gui::is_project_paused(&project.path) {
+            info!("  ⏸️ Skipping paused project: {}", project.path);
+            results.push(CommitResult {
+                project_path: project.path.clone(),
+                committed: false,
+                pushed: false,
+                commit_message: "Paused by user".into(),
+                files_changed: 0,
+                error: None,
+            });
+            continue;
+        }
+
         info!("Processing project: {}", project.path);
 
         let result = process_project(config, &project).await;

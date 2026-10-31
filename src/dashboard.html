@@ -288,6 +288,12 @@
       color: #6ee7b7;
     }
 
+    .badge-paused {
+      background: rgba(245, 158, 11, 0.2);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
     /* History Feed */
     .history-item {
       padding: 12px 14px;
@@ -579,16 +585,20 @@
         return;
       }
       container.innerHTML = projects.map(p => `
-        <div class="project-item">
+        <div class="project-item" style="${p.is_paused ? 'opacity: 0.75; border-color: rgba(245, 158, 11, 0.3);' : ''}">
           <div class="project-info">
             <div class="project-name">
               <span>📁 ${p.name}</span>
               <span class="badge">${p.ide || "IDE"}</span>
+              ${p.is_paused ? '<span class="badge badge-paused">⏸️ Lid Commit Paused</span>' : ''}
               ${p.has_changes ? '<span class="badge badge-diff">● Uncommitted Changes</span>' : '<span class="badge badge-clean">✓ Clean</span>'}
             </div>
             <div class="project-path">${p.path}</div>
           </div>
-          <div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-secondary" style="font-size: 12px; padding: 4px 10px; color: ${p.is_paused ? '#34d399' : '#fbbf24'};" onclick="sendToHost('toggle_project_pause', { path: '${p.path.replace(/\\/g, '\\\\')}' })">
+              ${p.is_paused ? '▶️ Resume Auto-Commit' : '⏸️ Pause Auto-Commit'}
+            </button>
             <button class="btn btn-secondary" style="font-size: 12px; padding: 4px 10px;" onclick="sendToHost('sync_project', { path: '${p.path.replace(/\\/g, '\\\\')}' })">⚡ Commit This</button>
           </div>
         </div>

@@ -15,6 +15,8 @@ use crate::config::Config;
 use crate::CommitResult;
 
 static DAEMON_PAUSED: AtomicBool = AtomicBool::new(false);
+static PAUSED_PROJECTS: std::sync::LazyLock<Mutex<std::collections::HashSet<String>>> =
+    std::sync::LazyLock::new(|| Mutex::new(std::collections::HashSet::new()));
 static RECENT_HISTORY: Mutex<Vec<HistoryEntry>> = Mutex::new(Vec::new());
 
 #[derive(Clone, serde::Serialize)]
@@ -29,6 +31,31 @@ pub struct HistoryEntry {
 
 pub fn is_daemon_paused() -> bool {
     DAEMON_PAUSED.load(Ordering::Relaxed)
+}
+
+pub fn is_project_paused(path: &str) -> bool {
+    if let Ok(lock) = PAUSED_PROJECTS.lock() {
+        let normalized = path.replace('/', "\\").to_lowercase();
+        lock.iter().any(|p| p.replace('/', "\\").to_lowercase() == normalized)
+    } else {
+        false
+    }
+}
+
+pub fn toggle_project_pause(path: &str) -> bool {
+    if let Ok(mut lock) = PAUSED_PROJECTS.lock() {
+        let normalized = path.to_string();
+        let exists = lock.iter().any(|p| p.replace('/', "\\").to_lowercase() == normalized.replace('/', "\\").to_lowercase());
+        if exists {
+            lock.retain(|p| p.replace('/', "\\").to_lowercase() != normalized.replace('/', "\\").to_lowercase());
+            false // Now active (not paused)
+        } else {
+            lock.insert(normalized);
+            true // Now paused
+        }
+    } else {
+        false
+    }
 }
 
 pub fn record_history(results: &[CommitResult]) {
@@ -221,6 +248,20 @@ fn handle_ipc_message(
                         crate::trigger_manual_sync().await;
                     });
                 }
+                "sync_project" => {
+                    if let Some(path) = json.get("path").and_then(|v| v.as_str()) {
+                        let path = path.to_string();
+                        handle.spawn(async move {
+                            crate::trigger_project_sync(&path).await;
+                        });
+                    }
+                }
+                "toggle_project_pause" => {
+                    if let Some(path) = json.get("path").and_then(|v| v.as_str()) {
+                        toggle_project_pause(path);
+                        let _ = proxy.send_event(UserEvent::UpdateData);
+                    }
+                }
                 "get_status" => {
                     let _ = proxy.send_event(UserEvent::UpdateData);
                 }
@@ -260,11 +301,14 @@ fn trigger_data_fetch(
                 Err(_) => false,
             };
 
+            let is_paused = is_project_paused(&p.path);
+
             project_payload.push(serde_json::json!({
                 "name": name,
                 "path": p.path,
                 "ide": p.ide,
                 "has_changes": has_changes,
+                "is_paused": is_paused,
             }));
         }
 
