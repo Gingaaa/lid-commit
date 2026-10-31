@@ -72,8 +72,9 @@ async fn main() -> Result<()> {
     // Spawn GUI on dedicated thread if not headless
     if !has_headless_arg {
         let config_clone = std::sync::Arc::new(tokio::sync::RwLock::new(config.clone()));
+        let handle = tokio::runtime::Handle::current();
         std::thread::spawn(move || {
-            if let Err(e) = gui::run_desktop_app(config_clone) {
+            if let Err(e) = gui::run_desktop_app(config_clone, handle) {
                 tracing::error!("Desktop GUI error: {}", e);
             }
         });
