@@ -26,6 +26,9 @@ Your screen will now turn off safely when closing the lid, but your background p
 
 ---
 
+## ✨ Countribution
+
+
 ## ✨ Features
 
 - 🖥️ **Native Desktop Dashboard & System Tray** — Modern dark-mode GUI to manage projects, monitor live daemon status, and review commit logs.
