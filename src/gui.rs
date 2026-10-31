@@ -328,9 +328,21 @@ fn handle_ipc_message(
                         let clean_url = url.to_string();
                         #[cfg(target_os = "windows")]
                         {
-                            let _ = std::process::Command::new("rundll32")
-                                .args(&["url.dll,FileProtocolHandler", &clean_url])
-                                .spawn();
+                            use windows::core::HSTRING;
+                            use windows::Win32::UI::Shell::ShellExecuteW;
+                            use windows::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
+                            let op = HSTRING::from("open");
+                            let link = HSTRING::from(clean_url.as_str());
+                            unsafe {
+                                let _ = ShellExecuteW(
+                                    None,
+                                    &op,
+                                    &link,
+                                    None,
+                                    None,
+                                    SW_SHOWNORMAL,
+                                );
+                            }
                         }
                         #[cfg(target_os = "macos")]
                         {

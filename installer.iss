@@ -21,11 +21,16 @@ LicenseFile=LICENSE
 OutputDir=dist
 OutputBaseFilename=LidCommit-Setup-x86_64
 SetupIconFile=assets\app_icon.ico
-Compression=lzma2/ultra64
-SolidCompression=yes
+Compression=lzma/max
+SolidCompression=no
 WizardStyle=modern
 PrivilegesRequired=lowest
 ArchitecturesInstallIn64BitMode=x64compatible
+VersionInfoVersion=0.3.0.0
+VersionInfoCompany=Anshu Kumar
+VersionInfoDescription=LidCommit Setup Installer
+VersionInfoProductName=LidCommit
+VersionInfoProductVersion=0.3.0.0
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"

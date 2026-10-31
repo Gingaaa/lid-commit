@@ -96,9 +96,18 @@ pub async fn notify_update_available(update: &crate::updater::UpdateInfo) {
                     MB_YESNO | MB_ICONINFORMATION | MB_TOPMOST | MB_SETFOREGROUND,
                 );
                 if res == IDYES {
-                    let _ = std::process::Command::new("rundll32")
-                        .args(&["url.dll,FileProtocolHandler", &url])
-                        .spawn();
+                    use windows::Win32::UI::Shell::ShellExecuteW;
+                    use windows::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
+                    let op = HSTRING::from("open");
+                    let link = HSTRING::from(url.as_str());
+                    let _ = ShellExecuteW(
+                        None,
+                        &op,
+                        &link,
+                        None,
+                        None,
+                        SW_SHOWNORMAL,
+                    );
                 }
             }
         });
