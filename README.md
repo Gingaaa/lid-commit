@@ -1,25 +1,61 @@
 # 🔒 LidCommit
 
-**Auto-commit your code changes when you close your laptop lid.**
+**Autonomous Git auto-commit and push powered by AI when you close your laptop lid.**
 
-Note the Windows setting requirement: "Set 'When I close the lid' to 'Do nothing' in Control Panel > Power Options so background Git sync runs uninterrupted."
+Never lose unsaved progress again. LidCommit runs quietly on your system, automatically detects your actively open IDE workspaces, drafts intelligent commit messages from your git diffs using Gemini/OpenAI/Ollama, commits your changes, and pushes them to your remote repository.
 
-Never lose progress again. LidCommit runs silently in the background and, when you close your laptop, automatically detects your open IDE projects, generates an AI-powered commit message using Gemini, and commits + pushes your changes to GitHub.
+When you open another device, simply run `git pull` and continue right where you left off.
 
-When you pick up another device, just `git pull` and carry on exactly where you left off.
+---
+
+## ⚡ Crucial Setup: Windows Lid Close Power Setting
+
+> [!IMPORTANT]
+> To allow LidCommit to safely inspect your repositories, stage changes, generate AI messages, and push to GitHub while the lid is down, Windows must not abruptly put the network card and CPU to sleep before the git operations complete.
+
+### How to configure "Do Nothing" on Lid Close:
+1. Press `Win + R`, type **`control`**, and hit **Enter** to open the classic **Control Panel**.
+2. Set *View by* (top right) to **Large icons** or **Small icons**, then click **Power Options**.
+3. In the left sidebar, click **"Choose what closing the lid does"**.
+4. Locate the row **"When I close the lid"**:
+   - Set **On battery** to **Do nothing**.
+   - Set **Plugged in** to **Do nothing**.
+5. Click **Save changes**.
+
+Your screen will now turn off safely when closing the lid, but your background processes, Wi-Fi network connection, and LidCommit Git sync will execute seamlessly without being abruptly cut off!
 
 ---
 
 ## ✨ Features
 
-- 🔒 **Lid close detection** — native OS events (no polling)
-- 🤖 **AI commit messages** — Gemini generates meaningful messages from your actual diff
-- 🔍 **IDE-aware** — detects VS Code, JetBrains IDEs, and any git repo in a running process's CWD
-- 🚀 **Auto push** — commits and pushes to your branch automatically
-- 🛡️ **Safety guards** — skips on merge conflicts, too many files, or no remote
-- 🔔 **OS notifications** — toast notification tells you what was committed
-- ⚙️ **TOML config** — fully configurable per machine
-- 🌍 **Cross-platform** — Windows, macOS, Linux
+- 🖥️ **Native Desktop Dashboard & System Tray** — Modern dark-mode GUI to manage projects, monitor live daemon status, and review commit logs.
+- ⏸️ **Per-Project Pause / Resume Controls** — Choose which specific repositories should auto-commit on lid close and which ones to skip.
+- ⚡ **Instant "Sync Now" & "Commit This"** — Trigger manual commits across all or individual repositories anytime without needing to close your lid.
+- 🎯 **Active Window Filter** — Only tracks projects currently open in an active IDE window; closed historical folders are automatically ignored.
+- 🔒 **Native Lid Close Detection** — Real-time OS power broadcast monitoring with zero CPU polling.
+- 🤖 **AI Commit Messages** — Context-aware commit messages generated from your actual git diffs using Google Gemini, OpenAI, or local Ollama.
+- 🔍 **IDE-Aware** — Detects VS Code, Antigravity IDE, Cursor, Windsurf, JetBrains, and any running process with a git root.
+- 🚀 **Auto Push** — Automatically pushes to your branch with safety checks.
+- 🛡️ **Safety Guards** — Automatically skips if there are merge conflicts, untracked bulk files (>50), missing remotes, or if the repo is paused.
+- 🔔 **OS Notifications & Popups** — Foreground status summary modal upon wake-up so you always know what was synced.
+- ⚙️ **TOML Config & In-App Preferences** — Edit preferences directly in the desktop interface or via `config.toml`.
+- 🌍 **Cross-Platform** — Windows, macOS, and Linux.
+
+---
+
+## 🖥️ Desktop Dashboard Controls
+
+When you launch `lid-commit.exe`, it docks in your system tray and displays the native dashboard:
+
+| Feature | Description |
+|---|---|
+| **📁 Detected Projects** | Real-time list of all git repositories open in your active IDE windows with diff indicators (*Clean* vs *Uncommitted Changes*). |
+| **⏸️ Pause Auto-Commit** | Toggle button on each repository card to selectively exempt projects from lid-close commits. |
+| **⚡ Commit This** | Manually commits and pushes a single project on demand. |
+| **⚡ Sync Now** | Forces an immediate safe commit & push across all unpaused projects. |
+| **⏸️ Pause / ▶️ Resume Daemon** | Global pause toggle to temporarily suspend all background lid monitoring. |
+| **📜 Activity & History** | Live feed of recent automated commits with timestamp and file count. |
+| **⚙️ Configuration** | Configure AI providers (Gemini / OpenAI / Ollama), push settings, and safety thresholds. |
 
 ---
 
@@ -27,88 +63,62 @@ When you pick up another device, just `git pull` and carry on exactly where you 
 
 ### 1. Prerequisites
 
-- [Rust](https://rustup.rs/) installed
-- `git` in your PATH
-- A [Gemini API key](https://aistudio.google.com/app/apikey) (free)
+- [Rust toolchain](https://rustup.rs/) (v1.75+)
+- `git` in your system PATH
+- A [Google Gemini API key](https://aistudio.google.com/app/apikey) (free) or OpenAI key
 
-### 2. Build
+### 2. Build & Run
 
 ```bash
-git clone https://github.com/yourusername/lid-commit
+git clone https://github.com/Gingaaa/lid-commit.git
 cd lid-commit
 cargo build --release
 ```
 
-### 3. Set your API key
-
-```bash
-# Linux / macOS
-export GEMINI_API_KEY=your_key_here
-
-# Windows (PowerShell)
-[System.Environment]::SetEnvironmentVariable("GEMINI_API_KEY", "your_key_here", "User")
-```
-
-### 4. Install as a background service
-
-**Windows (run PowerShell as Administrator):**
+Run the desktop application:
 ```powershell
-.\install\windows\install.ps1 -ApiKey "your_gemini_key"
+.\target\release\lid-commit.exe
 ```
 
-**macOS:**
-```bash
-./install/macos/install.sh
+*(To run silently in background headless mode without the dashboard window, use `lid-commit.exe --headless`)*
+
+---
+
+### 3. Configure Your AI Key
+
+Set your environment variable or configure it via the dashboard settings tab:
+
+**Windows (PowerShell):**
+```powershell
+[System.Environment]::SetEnvironmentVariable("GEMINI_API_KEY", "your_gemini_key_here", "User")
 ```
 
-**Linux:**
+**macOS / Linux:**
 ```bash
-cargo build --release
-cp target/release/lid-commit ~/.local/bin/
-cp install/linux/lidcommit.service ~/.config/systemd/user/
-echo "GEMINI_API_KEY=your_key" > ~/.config/lid-commit/.env
-systemctl --user enable --now lidcommit
+export GEMINI_API_KEY="your_gemini_key_here"
 ```
 
 ---
 
 ## 🤖 AI Providers
 
-| Provider | Model Examples | Requires |
+| Provider | Model Examples | Setup |
 |---|---|---|
-| **Gemini** (default) | `gemini-2.0-flash`, `gemini-1.5-pro` | `GEMINI_API_KEY` |
-| **OpenAI** | `gpt-4o-mini`, `gpt-4o` | `OPENAI_API_KEY` |
-| **Ollama** (offline) | `llama3.2`, `codellama` | Ollama running locally |
-
-### Example AI-generated commit messages:
-
-```
-🔒 lid-close: add JWT middleware and fix session expiry handling
-🔒 lid-close: refactor database connection pooling for performance
-🔒 lid-close: fix null pointer in user authentication flow
-```
+| **Gemini** (default) | `gemini-2.0-flash`, `gemini-1.5-pro` | Free key from [Google AI Studio](https://aistudio.google.com/) |
+| **OpenAI** | `gpt-4o-mini`, `gpt-4o` | Set `OPENAI_API_KEY` |
+| **Ollama** (offline) | `llama3.2`, `codellama`, `mistral` | Runs 100% offline via local Ollama instance |
 
 ---
 
 ## 🛡️ Safety Guards
 
-LidCommit **skips** a project if:
-- Working tree is clean (nothing to commit)
-- More than 50 files changed (likely forgot `.gitignore`)
-- No remote configured (nowhere to push)
-- Merge conflicts present (would corrupt commit)
-- Path is in user-defined `excluded_paths`
-
----
-
-## 📊 Flow
-
-```
-Lid closes → detect open IDEs → for each project:
-  git status → check safety → build diff →
-  Gemini API → commit message → git add → git commit → git push
-  → OS notification
-```
+LidCommit **skips** auto-committing a project if:
+- ⏸️ Project is paused by the user in the dashboard.
+- 🧹 Working tree is clean (no modified or untracked files).
+- 📦 More than 50 files changed (guards against unignored `node_modules`, `target/`, or build artifacts).
+- 🌐 No remote repository configured (prevents dangling commits).
+- 💥 Merge conflicts exist in the working tree.
+- 🚫 Path matches user-defined `excluded_paths` in `config.toml`.
 
 ---
 
@@ -116,20 +126,23 @@ Lid closes → detect open IDEs → for each project:
 
 ```
 src/
-├── main.rs          — Daemon entry point, event loop
-├── config.rs        — TOML config loading
-├── lid_monitor/mod.rs  — Platform lid close detection
-│     Windows: WM_POWERBROADCAST + GUID_LIDCLOSE_ACTION
+├── main.rs          — Daemon entry point, event loop, manual sync dispatch
+├── gui.rs           — Native desktop window, system tray, and IPC controller
+├── dashboard.html   — Modern dark-mode dashboard UI
+├── config.rs        — Configuration parser & serializer
+├── lid_monitor/     — Native OS lid-switch & sleep event listeners
+│     Windows: WM_POWERBROADCAST + GUID_LIDSWITCH_STATE_CHANGE
 │     macOS:   IOKit kIOMessageSystemWillSleep
 │     Linux:   logind D-Bus PrepareForSleep
-├── ide_scanner/mod.rs  — Find open IDE projects
-├── git/mod.rs          — git status, diff, add, commit, push
-├── ai/mod.rs           — Gemini / OpenAI / Ollama
-└── notifier.rs         — OS toast notifications
+├── ide_scanner/     — Active IDE window & process scanner
+├── git/             — Safe git diff analysis, add, commit, and push
+├── ai/              — AI commit message generator (Gemini / OpenAI / Ollama)
+└── notifier.rs      — Toast notifications and resume modal dialogs
 ```
 
 ---
 
 ## 📄 License
 
-MIT
+MIT © [Anshu Kumar](https://github.com/Gingaaa)
+
