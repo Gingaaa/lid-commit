@@ -234,6 +234,71 @@
       box-shadow: 0 0 12px var(--brand-green-glow);
     }
 
+    /* Spinning and Loading Animations */
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .spinning {
+      display: inline-block;
+      animation: spin 0.75s linear infinite;
+    }
+
+    /* Top Progress Bar during Refresh/Sync */
+    #topProgressBar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(90deg, var(--brand-blue), var(--brand-green), var(--brand-orange));
+      background-size: 200% 100%;
+      animation: gradientShift 1.2s linear infinite;
+      z-index: 9999;
+      opacity: 0;
+      transition: opacity 0.25s ease;
+      pointer-events: none;
+    }
+
+    @keyframes gradientShift {
+      0% { background-position: 100% 0; }
+      100% { background-position: -100% 0; }
+    }
+
+    /* Refresh Toast Indicator */
+    #refreshToast {
+      position: fixed;
+      bottom: 24px;
+      right: 28px;
+      background: #111111;
+      border: 1px solid var(--border-focus);
+      color: #ffffff;
+      padding: 9px 16px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8), 0 0 16px var(--brand-blue-glow);
+      opacity: 0;
+      transform: translateY(12px);
+      transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 9999;
+      pointer-events: none;
+    }
+
+    #refreshToast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    #refreshToast.success {
+      border-color: rgba(16, 185, 129, 0.4);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8), 0 0 16px var(--brand-green-glow);
+    }
+
     /* Main Container & Tabs */
     .nav-tabs {
       flex-shrink: 0;
@@ -714,6 +779,15 @@
   </style>
 </head>
 <body>
+  <!-- Top Progress Bar -->
+  <div id="topProgressBar"></div>
+
+  <!-- Refresh / Sync Toast -->
+  <div id="refreshToast">
+    <span id="toastIcon" class="spinning">🔄</span>
+    <span id="toastText">Refreshing workspaces & Git status...</span>
+  </div>
+
   <!-- Header -->
   <header>
     <div class="brand">
@@ -751,7 +825,10 @@
       <div class="card">
         <div class="card-title">
           <span>Active IDE Workspaces & Git Repositories</span>
-          <button class="btn btn-secondary" style="font-size: 12px; padding: 4px 10px;" onclick="refreshData()">🔄 Refresh</button>
+          <button id="btnRefreshProjects" class="btn btn-secondary" style="font-size: 12px; padding: 4px 10px;" onclick="refreshData()">
+            <span id="iconRefreshProjects">🔄</span>
+            <span id="textRefreshProjects">Refresh</span>
+          </button>
         </div>
         <div id="projectList">
           <div style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 24px;">Scanning active repositories...</div>
@@ -781,7 +858,10 @@
         <div class="card-title">
           <span>📜 Commit Log &amp; Activity Timeline</span>
           <div style="display: flex; gap: 8px;">
-            <button class="btn btn-secondary" style="font-size: 12px; padding: 4px 10px;" onclick="refreshData()">🔄 Refresh Log</button>
+            <button id="btnRefreshHistory" class="btn btn-secondary" style="font-size: 12px; padding: 4px 10px;" onclick="refreshData()">
+              <span id="iconRefreshHistory">🔄</span>
+              <span id="textRefreshHistory">Refresh Log</span>
+            </button>
           </div>
         </div>
 
@@ -974,7 +1054,7 @@
 
   <!-- Footer -->
   <footer>
-    <span>🔒 LidCommit v0.1.0 • System Tray Active</span>
+    <span>🔒 LidCommit v0.2.0 • System Tray Active</span>
     <span id="lastScanTime">Ready</span>
   </footer>
 
@@ -1021,10 +1101,78 @@
       }
     }
 
+    let isRefreshing = false;
+    let refreshToastTimer = null;
+
+    function showRefreshProgress(message = "Refreshing workspaces & Git status...") {
+      isRefreshing = true;
+      // 1. Activate Top Progress Bar
+      const bar = document.getElementById('topProgressBar');
+      if (bar) bar.style.opacity = '1';
+
+      // 2. Animate Refresh Buttons
+      const iconP = document.getElementById('iconRefreshProjects');
+      const textP = document.getElementById('textRefreshProjects');
+      if (iconP) iconP.classList.add('spinning');
+      if (textP) textP.textContent = "Scanning...";
+
+      const iconH = document.getElementById('iconRefreshHistory');
+      const textH = document.getElementById('textRefreshHistory');
+      if (iconH) iconH.classList.add('spinning');
+      if (textH) textH.textContent = "Updating...";
+
+      // 3. Show Toast Notification
+      const toast = document.getElementById('refreshToast');
+      const toastIcon = document.getElementById('toastIcon');
+      const toastText = document.getElementById('toastText');
+      if (toast && toastIcon && toastText) {
+        clearTimeout(refreshToastTimer);
+        toast.className = "show";
+        toastIcon.textContent = "🔄";
+        toastIcon.className = "spinning";
+        toastText.textContent = message;
+      }
+    }
+
+    function finishRefreshProgress(successMessage = "Workspaces refreshed & up to date") {
+      isRefreshing = false;
+
+      // 1. Fade out Top Progress Bar
+      const bar = document.getElementById('topProgressBar');
+      if (bar) bar.style.opacity = '0';
+
+      // 2. Reset Button Icons & Text
+      const iconP = document.getElementById('iconRefreshProjects');
+      const textP = document.getElementById('textRefreshProjects');
+      if (iconP) iconP.classList.remove('spinning');
+      if (textP) textP.textContent = "Refresh";
+
+      const iconH = document.getElementById('iconRefreshHistory');
+      const textH = document.getElementById('textRefreshHistory');
+      if (iconH) iconH.classList.remove('spinning');
+      if (textH) textH.textContent = "Refresh Log";
+
+      // 3. Update Toast with Success State
+      const toast = document.getElementById('refreshToast');
+      const toastIcon = document.getElementById('toastIcon');
+      const toastText = document.getElementById('toastText');
+      if (toast && toastIcon && toastText) {
+        toast.className = "show success";
+        toastIcon.textContent = "✅";
+        toastIcon.className = "";
+        toastText.textContent = successMessage;
+
+        refreshToastTimer = setTimeout(() => {
+          toast.className = "";
+        }, 1800);
+      }
+    }
+
     function triggerSync() {
       const btn = document.getElementById('btnSyncNow');
       btn.textContent = "⏳ Syncing...";
       btn.disabled = true;
+      showRefreshProgress("Syncing repositories with Git remote...");
       sendToHost("sync_now");
       setTimeout(() => {
         btn.textContent = "⚡ Sync Now";
@@ -1034,7 +1182,14 @@
     }
 
     function refreshData() {
+      showRefreshProgress("Scanning active IDEs & Git status...");
       sendToHost("get_status");
+      // Safety fallback in case host response is delayed
+      setTimeout(() => {
+        if (isRefreshing) {
+          finishRefreshProgress("Refreshed");
+        }
+      }, 3500);
     }
 
     let selectedAiProvider = "gemini";
@@ -1145,6 +1300,11 @@
         }
       }
       document.getElementById('lastScanTime').textContent = "Last sync: " + new Date().toLocaleTimeString();
+
+      // Conclude visible refresh state when fresh data payload is received
+      if (isRefreshing) {
+        finishRefreshProgress("Refreshed & Up to Date");
+      }
     };
 
     function applyConfigToUI(cfg) {
