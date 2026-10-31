@@ -33,7 +33,7 @@ Your screen will now turn off safely when closing the lid, but your background p
 - ⚡ **Instant "Sync Now" & "Commit This"** — Trigger manual commits across all or individual repositories anytime without needing to close your lid.
 - 🎯 **Active Window Filter** — Only tracks projects currently open in an active IDE window; closed historical folders are automatically ignored.
 - 🔒 **Native Lid Close Detection** — Real-time OS power broadcast monitoring with zero CPU polling.
-- 🤖 **AI Commit Messages** — Context-aware commit messages generated from your actual git diffs using Google Gemini, OpenAI, or local Ollama.
+- 🤖 **AI & Fallback Commit Messages** — Context-aware commit messages generated from your diffs via Gemini/OpenAI/Ollama, with seamless automatic fallback to `[LidCommit] auto-save at <timestamp>` when no API key is provided or offline.
 - 🔍 **IDE-Aware** — Detects VS Code, Antigravity IDE, Cursor, Windsurf, JetBrains, and any running process with a git root.
 - 🚀 **Auto Push** — Automatically pushes to your branch with safety checks.
 - 🛡️ **Safety Guards** — Automatically skips if there are merge conflicts, untracked bulk files (>50), missing remotes, or if the repo is paused.
@@ -100,13 +100,28 @@ export GEMINI_API_KEY="your_gemini_key_here"
 
 ---
 
-## 🤖 AI Providers
+## 🤖 AI Providers & Fallback Commit Messages
 
 | Provider | Model Examples | Setup |
 |---|---|---|
 | **Gemini** (default) | `gemini-2.0-flash`, `gemini-1.5-pro` | Free key from [Google AI Studio](https://aistudio.google.com/) |
 | **OpenAI** | `gpt-4o-mini`, `gpt-4o` | Set `OPENAI_API_KEY` |
 | **Ollama** (offline) | `llama3.2`, `codellama`, `mistral` | Runs 100% offline via local Ollama instance |
+
+### 📝 Fallback Commit Message (No API Key Required)
+
+If you don't have a Google Gemini API key or any other AI API key configured, or if your machine is offline when the laptop lid closes, **LidCommit still works seamlessly without any errors**. 
+
+In such cases, it automatically switches to a clean, standardized timestamp-based commit message:
+
+```text
+[LidCommit] auto-save at YYYY-MM-DD HH:MM
+```
+
+*(Example: `[LidCommit] auto-save at 2026-10-31 11:25`)*
+
+- You can customize the commit prefix (default: `[LidCommit]`) anytime via `config.toml` or the dashboard settings.
+- When an API key is provided later, LidCommit will automatically resume generating descriptive, AI-powered summaries of your diffs.
 
 ---
 
