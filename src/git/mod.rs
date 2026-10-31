@@ -162,9 +162,16 @@ pub async fn commit_and_push(path: &str, message: &str, push: bool) -> Result<bo
 
 /// Run a git command in the given directory and return its stdout
 async fn run_git(path: &str, args: &[&str]) -> Result<String> {
-    let output = tokio::process::Command::new("git")
-        .args(args)
-        .current_dir(path)
+    let mut cmd = tokio::process::Command::new("git");
+    cmd.args(args).current_dir(path);
+
+    #[cfg(target_os = "windows")]
+    {
+        // CREATE_NO_WINDOW flag (0x08000000) prevents any flashing console windows when spawning git
+        cmd.creation_flags(0x08000000);
+    }
+
+    let output = cmd
         .output()
         .await
         .with_context(|| format!("Failed to run git {:?} in {}", args, path))?;
