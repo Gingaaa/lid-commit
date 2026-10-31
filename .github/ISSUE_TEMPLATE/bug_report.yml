@@ -1,0 +1,60 @@
+name: 🐛 Bug Report
+description: Create a report to help us fix a bug in LidCommit
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting an issue! Please search existing issues to make sure this bug hasn't already been reported.
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      description: What operating system are you running LidCommit on?
+      options:
+        - Windows 11
+        - Windows 10
+        - macOS (Apple Silicon M-series)
+        - macOS (Intel)
+        - Linux (Ubuntu/Debian)
+        - Linux (Fedora/Arch/Other)
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: LidCommit Version
+      description: What version of LidCommit are you using? (e.g. v0.2.0)
+      placeholder: v0.2.0
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the Bug
+      description: A clear and concise description of what the bug is.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Detailed steps to reproduce the behavior.
+      placeholder: |
+        1. Open VS Code with an uncommitted git repository
+        2. Launch LidCommit desktop app
+        3. Close laptop lid
+        4. See error or unexpected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Terminal or Log Output
+      description: Paste any relevant logs or terminal output here (run with RUST_LOG=debug for verbose logs).
+      render: shell

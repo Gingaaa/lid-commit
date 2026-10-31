@@ -26,9 +26,6 @@ Your screen will now turn off safely when closing the lid, but your background p
 
 ---
 
-## ✨ Countribution
-
-
 ## ✨ Features
 
 - 🖥️ **Native Desktop Dashboard & System Tray** — Modern dark-mode GUI to manage projects, monitor live daemon status, and review commit logs.
@@ -195,7 +192,20 @@ src/
 
 ---
 
-## 📄 License
+## 🤝 Contributing
 
-MIT © [Anshu Kumar](https://github.com/Gingaaa)
+Contributions are welcome and appreciated! Like Next.js, shadcn/ui, and standard open source ecosystems, we follow clear guidelines to keep contributions smooth and organized:
 
+1. Read our **[Contributing Guide (CONTRIBUTING.md)](CONTRIBUTING.md)** for development setup, conventional commit rules, and PR submission steps.
+2. Read our **[Code of Conduct (CODE_OF_CONDUCT.md)](CODE_OF_CONDUCT.md)** to ensure an inclusive community.
+3. Review our **[Security Policy (SECURITY.md)](SECURITY.md)** to report vulnerabilities responsibly.
+
+*By submitting a Pull Request, you agree that your contribution is your original work and is granted under the project's MIT License while Anshu Kumar retains project ownership and maintainer rights.*
+
+---
+
+## 📄 License & Copyright
+
+Released under the **[MIT License](LICENSE)**.
+
+Copyright (c) 2026 **[Anshu Kumar](https://github.com/Gingaaa)**. All rights reserved.
