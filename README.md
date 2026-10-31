@@ -102,11 +102,14 @@ export GEMINI_API_KEY="your_gemini_key_here"
 
 ## 🤖 AI Providers & Fallback Commit Messages
 
-| Provider | Model Examples | Setup |
-|---|---|---|
-| **Gemini** (default) | `gemini-2.0-flash`, `gemini-1.5-pro` | Free key from [Google AI Studio](https://aistudio.google.com/) |
-| **OpenAI** | `gpt-4o-mini`, `gpt-4o` | Set `OPENAI_API_KEY` |
-| **Ollama** (offline) | `llama3.2`, `codellama`, `mistral` | Runs 100% offline via local Ollama instance |
+| Provider | Model Examples | Setup | In-App UI Configuration |
+|---|---|---|---|
+| **Google Gemini** (default) | `gemini-2.0-flash`, `gemini-1.5-pro` | Free key from [Google AI Studio](https://aistudio.google.com/) | Enter API key directly in Dashboard UI or use `GEMINI_API_KEY` |
+| **Ollama** (offline) | `llama3.2`, `codellama`, `mistral` | Runs 100% offline via local Ollama instance | Configure custom local URL (default: `http://localhost:11434`) & model |
+| **OpenAI** | `gpt-4o-mini`, `gpt-4o` | Set `OPENAI_API_KEY` | Enter API key directly in Dashboard UI or use `OPENAI_API_KEY` |
+| **Clean Auto-Save** | Timestamps (offline) | Zero configuration / no API keys required | 1-click toggle in Dashboard UI |
+
+You can switch between any of the 4 providers directly in the **Desktop Dashboard Settings tab** with one click. When one provider is selected, the others are deactivated, and the relevant configuration fields (API key input, endpoint URL, or model tag) adapt dynamically.
 
 ### 📝 Fallback Commit Message (No API Key Required)
 
