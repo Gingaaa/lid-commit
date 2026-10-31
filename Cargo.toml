@@ -58,6 +58,7 @@ tray-icon = "0.26.1"
 tao = "0.37.2"
 image = "0.25.10"
 crossbeam-channel = "0.5.17"
+regex = "1.10"
 
 [target.'cfg(windows)'.dependencies]
 # Windows power management APIs

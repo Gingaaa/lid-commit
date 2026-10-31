@@ -11,6 +11,7 @@ pub mod gui;
 mod ide_scanner;
 mod lid_monitor;
 mod notifier;
+pub mod security;
 
 pub async fn trigger_manual_sync() {
     let dummy_config = match config::load().await {

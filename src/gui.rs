@@ -250,16 +250,21 @@ fn handle_ipc_message(
                 }
                 "sync_project" => {
                     if let Some(path) = json.get("path").and_then(|v| v.as_str()) {
-                        let path = path.to_string();
-                        handle.spawn(async move {
-                            crate::trigger_project_sync(&path).await;
-                        });
+                        if let Ok(safe_path) = crate::security::validate_and_canonicalize_path(path) {
+                            handle.spawn(async move {
+                                crate::trigger_project_sync(&safe_path).await;
+                            });
+                        } else {
+                            tracing::warn!("Blocked suspicious project path in IPC sync: {}", path);
+                        }
                     }
                 }
                 "toggle_project_pause" => {
                     if let Some(path) = json.get("path").and_then(|v| v.as_str()) {
-                        toggle_project_pause(path);
-                        let _ = proxy.send_event(UserEvent::UpdateData);
+                        if let Ok(safe_path) = crate::security::validate_and_canonicalize_path(path) {
+                            toggle_project_pause(&safe_path);
+                            let _ = proxy.send_event(UserEvent::UpdateData);
+                        }
                     }
                 }
                 "get_status" => {
@@ -280,7 +285,10 @@ fn handle_ipc_message(
                             current_config.general.notify_on_failure = notify;
                         }
                         if let Some(provider) = json_clone.get("ai_provider").and_then(|v| v.as_str()) {
-                            current_config.ai.provider = provider.to_string();
+                            let clean_prov = provider.trim().to_lowercase();
+                            if ["gemini", "openai", "claude", "ollama", "fallback"].contains(&clean_prov.as_str()) {
+                                current_config.ai.provider = clean_prov;
+                            }
                         }
                         if let Some(key) = json_clone.get("api_key").and_then(|v| v.as_str()) {
                             if !key.trim().is_empty() {
@@ -300,10 +308,11 @@ fn handle_ipc_message(
                             }
                         }
                         if let Some(prefix) = json_clone.get("commit_prefix").and_then(|v| v.as_str()) {
-                            current_config.git.commit_prefix = prefix.to_string();
+                            current_config.git.commit_prefix = crate::security::sanitize_commit_prefix(prefix);
                         }
                         if let Some(max_files) = json_clone.get("max_files").and_then(|v| v.as_u64()) {
-                            current_config.safety.max_files_changed = max_files as usize;
+                            // Cap max files between 1 and 500 for safety against denial-of-service / huge commits
+                            current_config.safety.max_files_changed = (max_files as usize).clamp(1, 500);
                         }
 
                         if let Err(e) = crate::config::save(&current_config).await {

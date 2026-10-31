@@ -18,11 +18,17 @@ pub struct RepoStatus {
     pub diff_summary: String,
     /// Current branch name
     pub branch: String,
+    /// High-risk secret or sensitive file detected
+    pub security_violation: Option<String>,
 }
 
 impl RepoStatus {
     /// Check safety guards. Returns `Some(reason)` if we should skip committing.
     pub fn should_skip(&self, config: &Config) -> Option<String> {
+        if let Some(ref sec_err) = self.security_violation {
+            return Some(sec_err.clone());
+        }
+
         if !self.has_remote && config.safety.require_remote {
             return Some("no remote configured".into());
         }
@@ -69,15 +75,22 @@ pub async fn check_project(path: &str, config: &Config) -> Result<RepoStatus> {
     });
 
     // 5. Build diff summary for AI
-    let diff_summary = if has_changes {
+    let (diff_summary, full_diff_text) = if has_changes {
         build_diff_summary(path, config.ai.max_diff_lines).await
     } else {
-        String::new()
+        (String::new(), String::new())
     };
 
+    // 6. Security & Credential Audit: Guard against accidental credential or secret exposure
+    let audit = crate::security::audit_repository(&changed_lines, &full_diff_text);
+    let security_violation = audit.violation_reason;
+
+    // Sanitize diff for AI to ensure zero external exfiltration of secrets
+    let safe_diff_summary = crate::security::sanitize_diff_for_ai(&diff_summary);
+
     debug!(
-        "Git status for {}: {} changed files, branch={}, remote={}",
-        path, changed_files, branch, has_remote
+        "Git status for {}: {} changed files, branch={}, remote={}, security_clean={}",
+        path, changed_files, branch, has_remote, security_violation.is_none()
     );
 
     Ok(RepoStatus {
@@ -85,15 +98,17 @@ pub async fn check_project(path: &str, config: &Config) -> Result<RepoStatus> {
         has_remote,
         changed_files,
         has_conflicts,
-        diff_summary,
+        diff_summary: safe_diff_summary,
         branch,
+        security_violation,
     })
 }
 
 /// Build a diff summary to send to the AI for commit message generation.
-/// Includes: changed file list + abbreviated diff (first N lines)
-async fn build_diff_summary(path: &str, max_lines: usize) -> String {
+/// Returns (formatted_summary, raw_diff_text)
+async fn build_diff_summary(path: &str, max_lines: usize) -> (String, String) {
     let mut parts = Vec::new();
+    let mut raw_diff = String::new();
 
     // File list from `git diff --name-status` (staged + unstaged)
     if let Ok(name_status) = run_git(path, &["diff", "--name-status", "HEAD"]).await {
@@ -116,35 +131,39 @@ async fn build_diff_summary(path: &str, max_lines: usize) -> String {
 
     // Abbreviated diff for context (up to max_lines)
     if let Ok(diff) = run_git(path, &["diff", "--unified=3", "HEAD"]).await {
+        raw_diff = diff.clone();
         let lines: Vec<&str> = diff.lines().take(max_lines).collect();
         if !lines.is_empty() {
             parts.push(format!("Diff (truncated to {} lines):\n{}", max_lines, lines.join("\n")));
         }
     }
 
-    parts.join("\n\n")
+    (parts.join("\n\n"), raw_diff)
 }
 
 /// Stage all changes, create a commit, and optionally push
 pub async fn commit_and_push(path: &str, message: &str, push: bool) -> Result<bool> {
-    info!("  📝 Staging all changes in {}...", path);
+    // Validate path against directory traversal
+    let clean_path = crate::security::validate_and_canonicalize_path(path)?;
+
+    info!("  📝 Staging all changes in {}...", clean_path);
 
     // Stage everything (respects .gitignore)
-    run_git(path, &["add", "--all"])
+    run_git(&clean_path, &["add", "--all"])
         .await
         .context("git add --all failed")?;
 
     info!("  💾 Committing with message: {}", message);
 
-    // Commit
-    run_git(path, &["commit", "-m", message])
+    // Commit using clean, direct arguments
+    run_git(&clean_path, &["commit", "-m", message])
         .await
         .context("git commit failed")?;
 
     // Optionally push
     if push {
         info!("  🚀 Pushing to remote...");
-        match run_git(path, &["push"]).await {
+        match run_git(&clean_path, &["push"]).await {
             Ok(_) => {
                 info!("  ✅ Push successful.");
                 return Ok(true);
