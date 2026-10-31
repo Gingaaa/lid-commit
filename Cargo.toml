@@ -1,6 +1,6 @@
 [package]
 name = "lid-commit"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "Auto-commit and push your code changes when you close your laptop lid"
 authors = ["Anshu Kumar anshusee22@gmail.com"]

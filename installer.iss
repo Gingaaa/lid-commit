@@ -2,7 +2,7 @@
 ; Generates standard Windows Setup executable: LidCommit-Setup.exe
 
 #define MyAppName "LidCommit"
-#define MyAppVersion "0.1.0"
+#define MyAppVersion "0.2.0"
 #define MyAppPublisher "Anshu Kumar"
 #define MyAppURL "https://github.com/Gingaaa/lid-commit"
 #define MyAppExeName "lid-commit.exe"
