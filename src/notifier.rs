@@ -62,6 +62,49 @@ pub async fn notify_error(message: &str) {
     show_notification("🔒 LidCommit Error", message).await;
 }
 
+/// Show OS notification when a new version update is available
+pub async fn notify_update_available(update: &crate::updater::UpdateInfo) {
+    let title = "🚀 LidCommit Update Available!";
+    let body = format!(
+        "A new release (v{}) is ready to download! Click to get the latest features.\nCurrent version: v{}",
+        update.latest_version, update.current_version
+    );
+
+    show_notification(title, &body).await;
+
+    #[cfg(target_os = "windows")]
+    {
+        let url = update.html_url.clone();
+        let version_tag = update.latest_version.clone();
+        std::thread::spawn(move || {
+            use windows::core::HSTRING;
+            use windows::Win32::UI::WindowsAndMessaging::{
+                MessageBoxW, IDYES, MB_ICONINFORMATION, MB_SETFOREGROUND, MB_TOPMOST,
+                MB_YESNO,
+            };
+            let prompt = format!(
+                "A new version of LidCommit (v{}) is available!\n\nWould you like to open the download page now?",
+                version_tag
+            );
+            let text_wide = HSTRING::from(prompt.as_str());
+            let title_wide = HSTRING::from("LidCommit Update Available");
+            unsafe {
+                let res = MessageBoxW(
+                    None,
+                    &text_wide,
+                    &title_wide,
+                    MB_YESNO | MB_ICONINFORMATION | MB_TOPMOST | MB_SETFOREGROUND,
+                );
+                if res == IDYES {
+                    let _ = std::process::Command::new("rundll32")
+                        .args(&["url.dll,FileProtocolHandler", &url])
+                        .spawn();
+                }
+            }
+        });
+    }
+}
+
 #[cfg(target_os = "windows")]
 static POPUP_ACTIVE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 

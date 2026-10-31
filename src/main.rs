@@ -12,6 +12,7 @@ mod ide_scanner;
 mod lid_monitor;
 mod notifier;
 pub mod security;
+pub mod updater;
 
 pub async fn trigger_manual_sync() {
     let dummy_config = match config::load().await {
@@ -77,6 +78,11 @@ async fn main() -> Result<()> {
         if let Err(e) = lid_monitor::run(tx_clone).await {
             error!("Lid monitor error: {}", e);
         }
+    });
+
+    // Spawn automatic update checker in background
+    tokio::spawn(async move {
+        updater::start_background_updater_loop().await;
     });
 
     info!("👂 Listening for lid close events...");

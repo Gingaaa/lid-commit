@@ -323,6 +323,25 @@ fn handle_ipc_message(
                         let _ = proxy_clone.send_event(UserEvent::UpdateData);
                     });
                 }
+                "open_url" => {
+                    if let Some(url) = json.get("url").and_then(|v| v.as_str()) {
+                        let clean_url = url.to_string();
+                        #[cfg(target_os = "windows")]
+                        {
+                            let _ = std::process::Command::new("rundll32")
+                                .args(&["url.dll,FileProtocolHandler", &clean_url])
+                                .spawn();
+                        }
+                        #[cfg(target_os = "macos")]
+                        {
+                            let _ = std::process::Command::new("open").arg(&clean_url).spawn();
+                        }
+                        #[cfg(target_os = "linux")]
+                        {
+                            let _ = std::process::Command::new("xdg-open").arg(&clean_url).spawn();
+                        }
+                    }
+                }
                 _ => {}
             }
         }
@@ -407,12 +426,15 @@ fn trigger_data_fetch(
             "max_files": dummy_config.safety.max_files_changed,
         });
 
+        let update_payload = crate::updater::get_available_update();
+
         let data = serde_json::json!({
             "status": status,
             "projects": project_payload,
             "history": history,
             "git_commits": project_commits,
             "config": config_payload,
+            "update": update_payload,
         });
 
         let script = format!("if (window.updateDashboard) {{ window.updateDashboard({}); }}", data);
