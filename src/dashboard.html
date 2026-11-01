@@ -786,7 +786,7 @@
   <div id="updateBanner" style="display: none; background: linear-gradient(90deg, rgba(37, 99, 235, 0.22), rgba(16, 185, 129, 0.22)); border-bottom: 1px solid rgba(16, 185, 129, 0.4); padding: 9px 24px; font-size: 12px; font-weight: 600; color: #ffffff; display: flex; align-items: center; justify-content: space-between; z-index: 1000;">
     <div style="display: flex; align-items: center; gap: 8px;">
       <span style="font-size: 15px;">🚀</span>
-      <span>A new version of LidCommit (<strong id="updateVersionTag" style="color: var(--brand-green-light);">v0.2.1</strong>) is available!</span>
+      <span>A new version of LidCommit (<strong id="updateVersionTag" style="color: var(--brand-green-light);"></strong>) is available!</span>
     </div>
     <div style="display: flex; align-items: center; gap: 10px;">
       <button class="btn btn-primary" style="font-size: 11px; padding: 4px 12px;" onclick="downloadUpdate()">Download Update ↗</button>
@@ -1327,6 +1327,9 @@
           verTag.textContent = "v" + data.update.latest_version;
           banner.style.display = 'flex';
         }
+      } else {
+        const banner = document.getElementById('updateBanner');
+        if (banner) banner.style.display = 'none';
       }
     };
 
