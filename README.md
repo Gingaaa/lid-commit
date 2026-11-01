@@ -1,6 +1,12 @@
-# 🔒 LidCommit
+﻿# 🔒 LidCommit
 
 **Autonomous Git auto-commit and push powered by AI when you close your laptop lid.**
+
+[![Official Website](https://img.shields.io/badge/Official_Website-lid--commit--web.netlify.app-00DC82?style=for-the-badge&logo=netlify&logoColor=white)](https://lid-commit-web.netlify.app/)
+[![Release](https://img.shields.io/badge/Release-v0.2.0-blue.svg?style=for-the-badge)](https://github.com/Gingaaa/lid-commit/releases/latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-emerald.svg?style=for-the-badge)](LICENSE)
+
+> 🌐 **Official Website & Interactive Guide**: **[https://lid-commit-web.netlify.app/](https://lid-commit-web.netlify.app/)**
 
 Never lose unsaved progress again. LidCommit runs quietly on your system, automatically detects your actively open IDE workspaces, drafts intelligent commit messages from your git diffs using Gemini/OpenAI/Ollama, commits your changes, and pushes them to your remote repository.
 
