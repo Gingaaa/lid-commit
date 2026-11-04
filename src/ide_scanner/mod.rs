@@ -223,6 +223,16 @@ async fn get_running_ide_active_workspaces(running_procs: &[String]) -> Vec<(Str
                     .and_then(|v| v.as_array())
                 {
                     for win in opened {
+                        // Check if backupPath exists on disk if provided.
+                        // When a window/project is closed in VS Code / Antigravity / Cursor,
+                        // its session backup directory is deleted immediately. If backupPath is specified
+                        // but no longer exists on disk, that window has been closed!
+                        if let Some(backup_p) = win.get("backupPath").and_then(|v| v.as_str()) {
+                            if !std::path::Path::new(backup_p).exists() {
+                                continue;
+                            }
+                        }
+
                         if let Some(folder_uri) = win.get("folder").and_then(|v| v.as_str()) {
                             if let Some(valid_path) = parse_uri(folder_uri) {
                                 results.push((valid_path, app_dir_name.to_lowercase()));
