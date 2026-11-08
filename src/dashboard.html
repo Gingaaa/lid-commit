@@ -786,10 +786,10 @@
   <div id="updateBanner" style="display: none; background: linear-gradient(90deg, rgba(37, 99, 235, 0.22), rgba(16, 185, 129, 0.22)); border-bottom: 1px solid rgba(16, 185, 129, 0.4); padding: 9px 24px; font-size: 12px; font-weight: 600; color: #ffffff; display: flex; align-items: center; justify-content: space-between; z-index: 1000;">
     <div style="display: flex; align-items: center; gap: 8px;">
       <span style="font-size: 15px;">🚀</span>
-      <span>A new version of LidCommit (<strong id="updateVersionTag" style="color: var(--brand-green-light);"></strong>) is available!</span>
+      <span>A new version of LidCommit is launched! (Current: <strong id="updateCurrentVersionTag" style="color: var(--brand-green-light);"></strong>)</span>
     </div>
     <div style="display: flex; align-items: center; gap: 10px;">
-      <button class="btn btn-primary" style="font-size: 11px; padding: 4px 12px;" onclick="downloadUpdate()">Download Update ↗</button>
+      <button class="btn btn-primary" style="font-size: 11px; padding: 4px 12px;" onclick="downloadUpdate()">Download It Now ↗</button>
       <button style="background: transparent; border: none; color: var(--text-sub); cursor: pointer; font-size: 15px;" onclick="dismissUpdateBanner()">✕</button>
     </div>
   </div>
@@ -1319,12 +1319,14 @@
       }
 
       // Check for remote application update
-      if (data.update && data.update.latest_version) {
+      if (data.update && (data.update.latest_version || data.update.current_version)) {
         currentUpdateInfo = data.update;
         const banner = document.getElementById('updateBanner');
-        const verTag = document.getElementById('updateVersionTag');
-        if (banner && verTag) {
-          verTag.textContent = "v" + data.update.latest_version;
+        const curVerTag = document.getElementById('updateCurrentVersionTag');
+        if (banner) {
+          if (curVerTag) {
+            curVerTag.textContent = "v" + (data.update.current_version || "0.3.0");
+          }
           banner.style.display = 'flex';
         }
       } else {

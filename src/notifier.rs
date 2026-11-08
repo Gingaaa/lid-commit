@@ -66,8 +66,8 @@ pub async fn notify_error(message: &str) {
 pub async fn notify_update_available(update: &crate::updater::UpdateInfo) {
     let title = "🚀 LidCommit Update Available!";
     let body = format!(
-        "A new release (v{}) is ready to download! Click to get the latest features.\nCurrent version: v{}",
-        update.latest_version, update.current_version
+        "A new version of LidCommit is launched! Download it now.\nCurrent version: v{}",
+        update.current_version
     );
 
     show_notification(title, &body).await;
@@ -75,7 +75,7 @@ pub async fn notify_update_available(update: &crate::updater::UpdateInfo) {
     #[cfg(target_os = "windows")]
     {
         let url = update.html_url.clone();
-        let version_tag = update.latest_version.clone();
+        let cur_ver = update.current_version.clone();
         std::thread::spawn(move || {
             use windows::core::HSTRING;
             use windows::Win32::UI::WindowsAndMessaging::{
@@ -83,8 +83,8 @@ pub async fn notify_update_available(update: &crate::updater::UpdateInfo) {
                 MB_YESNO,
             };
             let prompt = format!(
-                "A new version of LidCommit (v{}) is available!\n\nWould you like to open the download page now?",
-                version_tag
+                "A new version of LidCommit is launched!\n\nCurrent version: v{}\n\nWould you like to download it now?",
+                cur_ver
             );
             let text_wide = HSTRING::from(prompt.as_str());
             let title_wide = HSTRING::from("LidCommit Update Available");
