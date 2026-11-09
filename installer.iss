@@ -2,7 +2,7 @@
 ; Generates standard Windows Setup executable: LidCommit-Setup.exe
 
 #define MyAppName "LidCommit"
-#define MyAppVersion "0.3.0"
+#define MyAppVersion "0.4.0"
 #define MyAppPublisher "Anshu Kumar"
 #define MyAppURL "https://github.com/Gingaaa/lid-commit"
 #define MyAppExeName "lid-commit.exe"
@@ -27,11 +27,11 @@ SolidCompression=no
 WizardStyle=modern
 PrivilegesRequired=lowest
 ArchitecturesInstallIn64BitMode=x64compatible
-VersionInfoVersion=0.3.0.0
+VersionInfoVersion=0.4.0.0
 VersionInfoCompany=Anshu Kumar
 VersionInfoDescription=LidCommit Setup Installer
 VersionInfoProductName=LidCommit
-VersionInfoProductVersion=0.3.0.0
+VersionInfoProductVersion=0.4.0.0
 
 ; Smooth Reinstallation / In-place Upgrade Handling
 CloseApplications=yes
