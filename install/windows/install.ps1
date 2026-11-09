@@ -39,18 +39,25 @@ cargo build --release
 Pop-Location
 Write-Host "Build complete!" -ForegroundColor Green
 
-# 4. Create install directory and copy binary
+# 4. Stop running instance if reinstalling/updating
+Write-Host "`nChecking for running instance of $ExeName..." -ForegroundColor Yellow
+Get-Process -Name "lid-commit" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+Start-Sleep -Milliseconds 500
+
+# 5. Create install directory and copy binary
 Write-Host "`nInstalling to $InstallPath..." -ForegroundColor Yellow
 New-Item -ItemType Directory -Force -Path $InstallPath | Out-Null
 Copy-Item "$projectDir\target\release\$ExeName" "$InstallPath\$ExeName" -Force
 
-# 5. Copy example config if no config exists
+# 6. Copy example config if no config exists (Preserve existing user configs during reinstallation)
 $configDir = "$env:APPDATA\lid-commit"
 $configFile = "$configDir\config.toml"
 if (-not (Test-Path $configFile)) {
     New-Item -ItemType Directory -Force -Path $configDir | Out-Null
     Copy-Item "$projectDir\config.example.toml" $configFile
     Write-Host "Config created at: $configFile" -ForegroundColor Green
+} else {
+    Write-Host "Existing user config preserved at: $configFile" -ForegroundColor Green
 }
 
 # 6. Set API key in environment if provided

@@ -16,6 +16,7 @@ AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
 DefaultDirName={autopf}\{#MyAppName}
+UsePreviousAppDir=yes
 DisableProgramGroupPage=yes
 LicenseFile=LICENSE
 OutputDir=dist
@@ -31,6 +32,11 @@ VersionInfoCompany=Anshu Kumar
 VersionInfoDescription=LidCommit Setup Installer
 VersionInfoProductName=LidCommit
 VersionInfoProductVersion=0.3.0.0
+
+; Smooth Reinstallation / In-place Upgrade Handling
+CloseApplications=yes
+RestartApplications=no
+CloseApplicationsFilter=lid-commit.exe
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -52,3 +58,46 @@ Name: "{userstartup}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: st
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
+
+[UninstallRun]
+; Stop running background daemon immediately before uninstall begins
+Filename: "taskkill.exe"; Parameters: "/f /im {#MyAppExeName}"; Flags: runhidden; RunOnceId: "StopLidCommitDaemon"
+
+[Code]
+// Gracefully terminate existing background daemon before installing or updating
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+var
+  ResultCode: Integer;
+begin
+  Exec('taskkill.exe', '/f /im {#MyAppExeName}', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Result := '';
+end;
+
+// Gracefully terminate existing daemon before uninstalling
+function InitializeUninstall(): Boolean;
+var
+  ResultCode: Integer;
+begin
+  Exec('taskkill.exe', '/f /im {#MyAppExeName}', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Result := True;
+end;
+
+// Post-uninstall: Prompt user whether to preserve or remove user configuration & API keys
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+var
+  ConfigDir: String;
+begin
+  if CurUninstallStep = usPostUninstall then
+  begin
+    ConfigDir := ExpandConstant('{userappdata}\{#MyAppName}');
+    if DirExists(ConfigDir) then
+    begin
+      if MsgBox('Do you also want to delete your LidCommit configuration, preferences, and saved API keys?' + #13#10 + #13#10 +
+                'Select "Yes" to completely remove all data, or "No" to keep your settings for future reinstallation.', 
+                mbConfirmation, MB_YESNO) = IDYES then
+      begin
+        DelTree(ConfigDir, True, True, True);
+      end;
+    end;
+  end;
+end;
