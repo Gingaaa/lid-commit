@@ -2,7 +2,7 @@
 ; Generates standard Windows Setup executable: LidCommit-Setup.exe
 
 #define MyAppName "LidCommit"
-#define MyAppVersion "0.4.2"
+#define MyAppVersion "0.4.3"
 #define MyAppPublisher "Anshu Kumar"
 #define MyAppURL "https://github.com/Gingaaa/lid-commit"
 #define MyAppExeName "lid-commit.exe"
@@ -17,6 +17,7 @@ AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
 DefaultDirName={autopf}\{#MyAppName}
 UsePreviousAppDir=yes
+DisableWelcomePage=no
 DisableProgramGroupPage=yes
 LicenseFile=LICENSE
 OutputDir=dist
@@ -27,11 +28,11 @@ SolidCompression=no
 WizardStyle=modern
 PrivilegesRequired=lowest
 ArchitecturesInstallIn64BitMode=x64compatible
-VersionInfoVersion=0.4.2.0
+VersionInfoVersion=0.4.3.0
 VersionInfoCompany=Anshu Kumar
 VersionInfoDescription=LidCommit Setup Installer
 VersionInfoProductName=LidCommit
-VersionInfoProductVersion=0.4.2.0
+VersionInfoProductVersion=0.4.3.0
 
 ; Smooth Reinstallation / In-place Upgrade Handling
 CloseApplications=yes
@@ -40,6 +41,10 @@ CloseApplicationsFilter=lid-commit.exe
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
+
+[Messages]
+WelcomeLabel1=Welcome to the {#MyAppName} Setup Wizard
+WelcomeLabel2=LidCommit automatically detects your open IDE projects and commits/pushes your pending code changes whenever you close your laptop lid.%n%nWith AI-powered intelligent commit messages (Gemini, OpenAI, Claude, or Ollama) and real-time dashboard controls, your work is always backed up and secure.%n%nClick Next to continue with the setup, or Cancel to exit.
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
