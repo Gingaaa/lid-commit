@@ -3,7 +3,6 @@
 **Autonomous Git auto-commit and push powered by AI when you close your laptop lid.**
 
 [![Official Website](https://img.shields.io/badge/Official_Website-lid--commit--web.netlify.app-00DC82?style=for-the-badge&logo=netlify&logoColor=white)](https://lid-commit-web.netlify.app/)
-[![Release](https://img.shields.io/badge/Release-v0.2.0-blue.svg?style=for-the-badge)](https://github.com/Gingaaa/lid-commit/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-emerald.svg?style=for-the-badge)](LICENSE)
 <a href="https://brandifydomains.com/trendingnow/lidcommit" target="_blank"><img src="https://img.shields.io/badge/Featured%20as%20TrendingNOW%20on-BrandifyDomains-6366f1?style=for-the-badge&logo=github" alt="Featured as TrendingNOW on BrandifyDomains" /></a>
 
