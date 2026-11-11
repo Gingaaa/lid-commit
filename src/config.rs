@@ -26,6 +26,9 @@ pub struct GeneralConfig {
     pub notify_on_success: bool,
     /// Show OS notification on failure
     pub notify_on_failure: bool,
+    /// Whether automatic monitoring and committing is paused globally
+    #[serde(default)]
+    pub paused: bool,
 }
 
 impl Default for GeneralConfig {
@@ -34,6 +37,7 @@ impl Default for GeneralConfig {
             push_after_commit: true,
             notify_on_success: true,
             notify_on_failure: true,
+            paused: false,
         }
     }
 }
@@ -95,6 +99,9 @@ pub struct GitConfig {
     pub push: bool,
     /// Paths to never auto-commit (glob patterns)
     pub excluded_paths: Vec<String>,
+    /// Explicit list of project directories paused by user in UI
+    #[serde(default)]
+    pub paused_paths: Vec<String>,
 }
 
 impl Default for GitConfig {
@@ -103,6 +110,7 @@ impl Default for GitConfig {
             commit_prefix: "🔒 lid-close:".into(),
             push: true,
             excluded_paths: vec![],
+            paused_paths: vec![],
         }
     }
 }

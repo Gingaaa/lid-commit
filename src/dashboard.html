@@ -1181,6 +1181,13 @@
     }
 
     function triggerSync() {
+      if (daemonState === "paused") {
+        showRefreshProgress("⚠️ Monitoring is currently paused globally. Resume to sync.");
+        setTimeout(() => {
+          if (isRefreshing) finishRefreshProgress("Paused - No Sync Performed");
+        }, 1500);
+        return;
+      }
       const btn = document.getElementById('btnSyncNow');
       btn.textContent = "⏳ Syncing...";
       btn.disabled = true;
@@ -1376,19 +1383,38 @@
       if (cfg.max_files) document.getElementById('cfgMaxFiles').value = cfg.max_files;
     }
 
+    function triggerSyncProject(path, isPaused) {
+      if (daemonState === "paused") {
+        showRefreshProgress("⚠️ Monitoring is currently paused globally. Resume to sync.");
+        setTimeout(() => {
+          if (isRefreshing) finishRefreshProgress("Paused - No Sync Performed");
+        }, 1500);
+        return;
+      }
+      if (isPaused) {
+        showRefreshProgress("⚠️ Project auto-commit is paused. Resume it to allow commits.");
+        setTimeout(() => {
+          if (isRefreshing) finishRefreshProgress("Project Paused");
+        }, 1500);
+        return;
+      }
+      sendToHost('sync_project', { path: path });
+    }
+
     function renderProjects(projects) {
       const container = document.getElementById('projectList');
       if (!projects || projects.length === 0) {
         container.innerHTML = '<div style="color: var(--text-dim); font-size: 13px; text-align: center; padding: 28px;">No active git projects detected in open IDEs.</div>';
         return;
       }
+      const isGloballyPaused = (daemonState === "paused");
       container.innerHTML = projects.map(p => `
-        <div class="project-item" style="${p.is_paused ? 'border-color: rgba(249, 115, 22, 0.35); background: #0c0906;' : ''}">
+        <div class="project-item" style="${(isGloballyPaused || p.is_paused) ? 'border-color: rgba(249, 115, 22, 0.35); background: #0c0906;' : ''}">
           <div class="project-info">
             <div class="project-name">
               <span>📁 ${p.name}</span>
               <span class="badge">${p.ide || "IDE"}</span>
-              ${p.is_paused ? '<span class="badge badge-paused">⏸️ Lid Commit Paused</span>' : ''}
+              ${isGloballyPaused ? '<span class="badge badge-paused">⏸️ Globally Paused</span>' : (p.is_paused ? '<span class="badge badge-paused">⏸️ Lid Commit Paused</span>' : '')}
               ${p.has_changes ? '<span class="badge badge-diff">● Uncommitted Changes</span>' : '<span class="badge badge-clean">✓ Clean</span>'}
             </div>
             <div class="project-path">${p.path}</div>
@@ -1397,7 +1423,7 @@
             <button class="btn ${p.is_paused ? 'btn-green' : 'btn-orange'}" style="font-size: 12px; padding: 6px 12px;" onclick="sendToHost('toggle_project_pause', { path: '${p.path.replace(/\\/g, '\\\\')}' })">
               ${p.is_paused ? '▶️ Resume Auto-Commit' : '⏸️ Pause Auto-Commit'}
             </button>
-            <button class="btn btn-secondary" style="font-size: 12px; padding: 6px 12px; border-color: rgba(37, 99, 235, 0.3); color: var(--brand-blue-light);" onclick="sendToHost('sync_project', { path: '${p.path.replace(/\\/g, '\\\\')}' })">⚡ Commit This</button>
+            <button class="btn btn-secondary" style="font-size: 12px; padding: 6px 12px; border-color: rgba(37, 99, 235, 0.3); color: var(--brand-blue-light);" onclick="triggerSyncProject('${p.path.replace(/\\/g, '\\\\')}', ${p.is_paused ? 'true' : 'false'})">⚡ Commit This</button>
           </div>
         </div>
       `).join('');

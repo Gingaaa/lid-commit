@@ -15,6 +15,11 @@ pub mod security;
 pub mod updater;
 
 pub async fn trigger_manual_sync() {
+    if gui::is_daemon_paused() {
+        info!("⏸️ Manual sync skipped because monitoring is paused.");
+        return;
+    }
+
     let dummy_config = match config::load().await {
         Ok(c) => c,
         Err(_) => config::Config::default(),
@@ -35,6 +40,16 @@ pub async fn trigger_manual_sync() {
 }
 
 pub async fn trigger_project_sync(path: &str) {
+    if gui::is_daemon_paused() {
+        info!("⏸️ Project sync for '{}' skipped because monitoring is paused globally.", path);
+        return;
+    }
+
+    if gui::is_project_paused(path) {
+        info!("⏸️ Project sync for '{}' skipped because this project is paused.", path);
+        return;
+    }
+
     let dummy_config = match config::load().await {
         Ok(c) => c,
         Err(_) => config::Config::default(),
@@ -68,6 +83,16 @@ async fn main() -> Result<()> {
     // Load config
     let config = config::load().await?;
     info!("✅ Config loaded");
+
+    // Initialize global and project pause states from persisted config
+    gui::set_daemon_paused(config.general.paused);
+    gui::set_paused_projects(&config.git.paused_paths);
+    if config.general.paused {
+        info!("⏸️ Daemon starts in PAUSED state (from saved configuration).");
+    }
+    if !config.git.paused_paths.is_empty() {
+        info!("⏸️ Loaded {} paused project(s) from saved configuration.", config.git.paused_paths.len());
+    }
 
     // Create event channel: lid monitor sends events, main loop processes them
     let (tx, mut rx) = tokio::sync::mpsc::channel::<LidEvent>(1);
@@ -148,6 +173,11 @@ async fn main() -> Result<()> {
                 }
             }
             LidEvent::LidResumed => {
+                if gui::is_daemon_paused() {
+                    info!("⏸️ Laptop resumed, but daemon is paused. Skipping resume notification popup.");
+                    continue;
+                }
+
                 if let Some(last) = last_resume_time {
                     if last.elapsed() < debounce_window {
                         info!("⏳ Duplicate LidResumed event within debounce window, ignoring.");
@@ -186,6 +216,12 @@ pub struct CommitResult {
 /// Core logic: find IDE projects and auto-commit each one
 async fn handle_lid_close(config: &config::Config) -> Result<Vec<CommitResult>> {
     let mut results = Vec::new();
+
+    // Defense-in-depth: Strict global pause check at the core execution level
+    if gui::is_daemon_paused() || config.general.paused {
+        info!("⏸️ Global pause is active! Auto-commit strictly blocked across all projects.");
+        return Ok(results);
+    }
 
     // 1. Scan for open IDE projects
     let projects = ide_scanner::find_open_projects(config).await?;
@@ -227,6 +263,32 @@ async fn process_project(
     project: &ide_scanner::Project,
 ) -> CommitResult {
     let path = project.path.clone();
+
+    // Strict safety check: Never commit or push if daemon is paused globally
+    if gui::is_daemon_paused() || config.general.paused {
+        info!("  ⏸️ Global pause active: strictly skipping {}", path);
+        return CommitResult {
+            project_path: path,
+            committed: false,
+            pushed: false,
+            commit_message: "Paused globally by user".into(),
+            files_changed: 0,
+            error: None,
+        };
+    }
+
+    // Strict safety check: Never commit or push if this specific project is paused
+    if gui::is_project_paused(&path) {
+        info!("  ⏸️ Project pause active: strictly skipping {}", path);
+        return CommitResult {
+            project_path: path,
+            committed: false,
+            pushed: false,
+            commit_message: "Paused by user".into(),
+            files_changed: 0,
+            error: None,
+        };
+    }
 
     // Check git status
     match git::check_project(&path, config).await {

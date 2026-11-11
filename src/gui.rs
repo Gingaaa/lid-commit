@@ -30,24 +30,56 @@ pub struct HistoryEntry {
 }
 
 pub fn is_daemon_paused() -> bool {
-    DAEMON_PAUSED.load(Ordering::Relaxed)
+    DAEMON_PAUSED.load(Ordering::SeqCst)
+}
+
+pub fn set_daemon_paused(paused: bool) {
+    DAEMON_PAUSED.store(paused, Ordering::SeqCst);
 }
 
 pub fn is_project_paused(path: &str) -> bool {
+    let normalized = path.trim().trim_end_matches(['/', '\\']).replace('/', "\\").to_lowercase();
     if let Ok(lock) = PAUSED_PROJECTS.lock() {
-        let normalized = path.replace('/', "\\").to_lowercase();
-        lock.iter().any(|p| p.replace('/', "\\").to_lowercase() == normalized)
+        lock.iter().any(|p| {
+            let p_norm = p.trim().trim_end_matches(['/', '\\']).replace('/', "\\").to_lowercase();
+            p_norm == normalized
+        })
     } else {
         false
     }
 }
 
-pub fn toggle_project_pause(path: &str) -> bool {
+pub fn set_paused_projects(paths: &[String]) {
     if let Ok(mut lock) = PAUSED_PROJECTS.lock() {
-        let normalized = path.to_string();
-        let exists = lock.iter().any(|p| p.replace('/', "\\").to_lowercase() == normalized.replace('/', "\\").to_lowercase());
+        lock.clear();
+        for p in paths {
+            let norm = p.trim().trim_end_matches(['/', '\\']).replace('/', "\\");
+            lock.insert(norm);
+        }
+    }
+}
+
+pub fn get_paused_projects() -> Vec<String> {
+    if let Ok(lock) = PAUSED_PROJECTS.lock() {
+        lock.iter().cloned().collect()
+    } else {
+        Vec::new()
+    }
+}
+
+pub fn toggle_project_pause(path: &str) -> bool {
+    let normalized = path.trim().trim_end_matches(['/', '\\']).replace('/', "\\");
+    let norm_lower = normalized.to_lowercase();
+
+    if let Ok(mut lock) = PAUSED_PROJECTS.lock() {
+        let exists = lock.iter().any(|p| {
+            p.trim().trim_end_matches(['/', '\\']).replace('/', "\\").to_lowercase() == norm_lower
+        });
+
         if exists {
-            lock.retain(|p| p.replace('/', "\\").to_lowercase() != normalized.replace('/', "\\").to_lowercase());
+            lock.retain(|p| {
+                p.trim().trim_end_matches(['/', '\\']).replace('/', "\\").to_lowercase() != norm_lower
+            });
             false // Now active (not paused)
         } else {
             lock.insert(normalized);
@@ -178,9 +210,16 @@ pub fn run_desktop_app(
                                 crate::trigger_manual_sync().await;
                             });
                         } else if event.id == toggle_id {
-                            let was_paused = DAEMON_PAUSED.load(Ordering::Relaxed);
-                            DAEMON_PAUSED.store(!was_paused, Ordering::Relaxed);
+                            let was_paused = DAEMON_PAUSED.load(Ordering::SeqCst);
+                            let new_state = !was_paused;
+                            DAEMON_PAUSED.store(new_state, Ordering::SeqCst);
                             let _ = proxy_tray.send_event(UserEvent::UpdateData);
+                            handle_tray.spawn(async move {
+                                if let Ok(mut cfg) = crate::config::load().await {
+                                    cfg.general.paused = new_state;
+                                    let _ = crate::config::save(&cfg).await;
+                                }
+                            });
                         } else if event.id == quit_id {
                             std::process::exit(0);
                         }
@@ -236,12 +275,24 @@ fn handle_ipc_message(
         if let Some(action) = json.get("action").and_then(|v| v.as_str()) {
             match action {
                 "pause" => {
-                    DAEMON_PAUSED.store(true, Ordering::Relaxed);
+                    DAEMON_PAUSED.store(true, Ordering::SeqCst);
                     let _ = proxy.send_event(UserEvent::UpdateData);
+                    handle.spawn(async {
+                        if let Ok(mut cfg) = crate::config::load().await {
+                            cfg.general.paused = true;
+                            let _ = crate::config::save(&cfg).await;
+                        }
+                    });
                 }
                 "resume" => {
-                    DAEMON_PAUSED.store(false, Ordering::Relaxed);
+                    DAEMON_PAUSED.store(false, Ordering::SeqCst);
                     let _ = proxy.send_event(UserEvent::UpdateData);
+                    handle.spawn(async {
+                        if let Ok(mut cfg) = crate::config::load().await {
+                            cfg.general.paused = false;
+                            let _ = crate::config::save(&cfg).await;
+                        }
+                    });
                 }
                 "sync_now" => {
                     handle.spawn(async {
@@ -364,7 +415,7 @@ fn trigger_data_fetch(
     proxy: &EventLoopProxy<UserEvent>,
     handle: &tokio::runtime::Handle,
 ) {
-    let paused = DAEMON_PAUSED.load(Ordering::Relaxed);
+    let paused = DAEMON_PAUSED.load(Ordering::SeqCst);
     let status = if paused { "paused" } else { "running" };
 
     let history = RECENT_HISTORY.lock().unwrap().clone();
